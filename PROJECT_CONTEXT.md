@@ -92,27 +92,45 @@ Notable structure:
 
 ```
 src/
-  App.jsx                          single route "/" -> KiidWorkflow
-  index.css                        @page rules from line ~111
+  App.jsx                          single route "/" -> KiidWorkflow ("*" -> PageNotFound)
+  index.css                        @page rules from line 111
   pages/
-    KiidWorkflow.jsx               the wizard shell
-    KiidEditor.jsx                 window.print() at ~line 89
+    KiidWorkflow.jsx               the wizard shell; owns state + stubbed findings
+    KiidEditor.jsx                 split editor/preview; printKiid() at line 91
   components/
     kiid/
       KiidForm.jsx                 master data + narrative inputs
+      HeaderForm.jsx               fund identification fields
       KiidPreview.jsx              the document itself
       SrriScale.jsx                1-7 coloured risk scale
       PerformanceChart.jsx         past performance bar chart (recharts)
       PerformanceEditor.jsx        past performance data entry
+      RichTextBullets.jsx          rich-text narrative input (react-quill)
       kiid-document.css            document styling
     workflow/
-      ValidationStep.jsx           NAV upload + validation results (stubbed)
+      WorkflowStepper.jsx          step indicator
+      ProductPicker.jsx            step 0 - document type
+      ProductionMode.jsx           step 1 - single vs batch
+      ValidationStep.jsx           step 2 - NAV upload + validation (stubbed)
+      ValidationResults.jsx        renders a findings list by severity
+    ui/                            shadcn components (many unused)
+    ScrollToTop.jsx
   lib/
     kiidData.js                    defaultData + sampleData (EPIC Funds p.l.c.)
+    printKiid.js                   off-screen iframe print path (fragile, see §5)
+    query-client.js                react-query client
+    PageNotFound.jsx
+    utils.js
+  hooks/                           use-mobile, use-size
+  utils/index.ts
 ```
 
 **There is no auth.** No login or register pages; `App.jsx` routes `/` straight to the
 wizard. This was a deliberate decision for the demo.
+
+**The wizard is four steps, not three:** Product -> Production -> Validation -> Editor.
+The editor is not a route — `KiidWorkflow` renders `KiidEditor` directly at `step === 3`
+so it can take over the full screen with its own header.
 
 **There is no API wiring.** No `fetch`, no `axios`, no `VITE_` environment variables
 anywhere in `src/`. All validation findings and the SRRI value are stubbed inside
@@ -130,9 +148,15 @@ final page with white space, and produced an image-only PDF with no selectable t
 could not respect a fixed page count, which is a regulatory requirement.
 
 It was replaced with **CSS paged media** — `@page` rules plus the browser's native print
-engine via `window.print()`. `generatePdf.js`, `html2canvas` and `jspdf` were deleted.
+engine. `generatePdf.js`, `html2canvas` and `jspdf` were deleted.
 The known trade-off is that the user gets a print dialog rather than an instant
-download; this is accepted for now. The one-click download returns when the Python
+download; this is accepted for now.
+
+Printing no longer calls `window.print()` on the page directly. `src/lib/printKiid.js`
+clones the preview into an off-screen iframe and prints that, because nested flex +
+`overflow:auto` shells caused Firefox and WebKit to clip or drop sections. It carries a
+separate Safari CSS branch. **This is the most fragile file in the repo** — changes to
+it or to the document CSS must be verified in Chrome, Firefox and Safari. The one-click download returns when the Python
 service renders the same HTML server-side with Playwright, which is also what satisfies
 rule 1 (one render path).
 
@@ -283,8 +307,9 @@ Recorded because they are easy to get wrong again:
   `@stripe/*`, `canvas-confetti`, `@hello-pangea/dnd`, `moment`, `react-markdown`. Also
   `embla-carousel-react`, `vaul` and `input-otp`, which appear only in unused shadcn
   component files. `three` alone is several hundred KB.
-- **`CLAUDE.md` in this repo is a Base44 export** and may describe a setup that no longer
-  exists. Verify it against reality before trusting it.
+- ~~**`CLAUDE.md` in this repo is a Base44 export**~~ — no longer true. `CLAUDE.md` is a
+  pointer to `AGENTS.md`, which was audited against the code and rewritten on
+  7 August 2026. Both now carry the §2 rules, the Python boundary and the deletions.
 - **Branch discipline.** Four developers now share this repo. Work on a branch, open a PR.
 
 ## 12. Companion documents
