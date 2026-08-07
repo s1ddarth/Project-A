@@ -25,7 +25,9 @@ html, body {
   display: block !important;
 }
 
+/* Flex print layouts are unreliable in WebKit — use block flow. */
 .kiid-print-root .kiid-doc {
+  display: block !important;
   gap: 0 !important;
   padding: 0 !important;
   align-items: stretch !important;
@@ -33,6 +35,7 @@ html, body {
 
 /* Flow into @page margins — do not keep on-screen A4 card chrome. */
 .kiid-print-root .kiid-page {
+  display: block !important;
   width: auto !important;
   min-height: 0 !important;
   height: auto !important;
@@ -40,6 +43,12 @@ html, body {
   box-shadow: none !important;
   margin: 0 !important;
   background: transparent !important;
+  overflow: visible !important;
+}
+
+.kiid-print-root .kiid-page:first-of-type {
+  break-after: page;
+  page-break-after: always;
 }
 
 .kiid-print-root .kiid-page:nth-of-type(2) {
@@ -47,7 +56,7 @@ html, body {
   page-break-before: always;
 }
 
-/* Soft fragmentation: never blank-out a tall section (Firefox/WebKit). */
+/* Soft fragmentation for Chromium/Firefox (Safari overrides below). */
 .kiid-print-root .kiid-redbox {
   break-inside: auto;
   page-break-inside: auto;
@@ -57,6 +66,7 @@ html, body {
 .kiid-print-root .kiid-charges,
 .kiid-print-root .kiid-regulatory,
 .kiid-print-root .kiid-perf-chart,
+.kiid-print-root .kiid-perf-chart svg,
 .kiid-print-root .kiid-bullets li {
   break-inside: avoid;
   page-break-inside: avoid;
@@ -72,9 +82,63 @@ html, body {
   width: 100% !important;
   height: 150px !important;
   min-height: 150px !important;
-  overflow: visible !important;
+  overflow: hidden !important;
 }
 `;
+
+/**
+ * WebKit largely ignores break-inside:avoid on bordered blocks and will slice
+ * red/blue boxes mid-chart. inline-block creates an atomic fragment that
+ * Safari will push to the next page instead of splitting.
+ */
+const SAFARI_PRINT_CSS = `
+.kiid-print-root .kiid-redbox,
+.kiid-print-root .kiid-bluebox {
+  break-inside: avoid !important;
+  page-break-inside: avoid !important;
+  -webkit-column-break-inside: avoid !important;
+  display: inline-block !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  vertical-align: top;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+}
+
+.kiid-print-root .kiid-split {
+  display: table !important;
+  width: 100% !important;
+  table-layout: fixed !important;
+  border-collapse: separate !important;
+  border-spacing: 10px 0 !important;
+}
+
+.kiid-print-root .kiid-split__left,
+.kiid-print-root .kiid-split__right,
+.kiid-print-root .kiid-split__left--wide,
+.kiid-print-root .kiid-split__right--narrow {
+  display: table-cell !important;
+  vertical-align: top !important;
+  float: none !important;
+}
+
+.kiid-print-root .kiid-split__left { width: 47% !important; }
+.kiid-print-root .kiid-split__right { width: 51% !important; }
+.kiid-print-root .kiid-split__left--wide { width: 51% !important; }
+.kiid-print-root .kiid-split__right--narrow { width: 47% !important; }
+
+.kiid-print-root .kiid-perf-chart,
+.kiid-print-root .kiid-perf-chart svg {
+  break-inside: avoid !important;
+  page-break-inside: avoid !important;
+  -webkit-column-break-inside: avoid !important;
+}
+`;
+
+function isSafariBrowser() {
+  const ua = navigator.userAgent;
+  return /Safari/i.test(ua) && !/Chrome|Chromium|CriOS|Edg|OPR|Firefox/i.test(ua);
+}
 
 function copyStylesInto(targetDoc) {
   Array.from(document.styleSheets).forEach((sheet) => {
@@ -115,6 +179,21 @@ function waitForStylesheets(doc) {
   );
 }
 
+function sizeIframeToContent(iframe, idoc, rootClone) {
+  // Safari often prints only the iframe's box; size it to the full document.
+  const height = Math.ceil(
+    Math.max(
+      rootClone.scrollHeight,
+      rootClone.offsetHeight,
+      idoc.body.scrollHeight,
+      idoc.documentElement.scrollHeight,
+      1123 * 2
+    )
+  );
+  iframe.style.width = '210mm';
+  iframe.style.height = `${height + 32}px`;
+}
+
 /** Build a filesystem-friendly Save-as-PDF title. */
 export function kiidPrintTitle(data = {}) {
   const fund = String(data.subFundName || 'KIID')
@@ -138,18 +217,21 @@ export function printKiid(rootEl, options = {}) {
   const title = options.title || 'KIID';
   const prevTitle = document.title;
   document.title = title;
+  const safari = isSafariBrowser();
 
   const iframe = document.createElement('iframe');
   iframe.setAttribute('aria-hidden', 'true');
   iframe.setAttribute('title', 'Print KIID');
+  // Keep the iframe "visible" to the engine (opacity:0 blanks Safari prints)
+  // but park it off-screen so the user never sees it.
   Object.assign(iframe.style, {
     position: 'fixed',
     top: '0',
-    left: '0',
+    left: '-10000px',
     width: '210mm',
-    height: '297mm',
+    height: '600mm',
     border: '0',
-    opacity: '0',
+    opacity: '1',
     pointerEvents: 'none',
     zIndex: '-1',
   });
@@ -173,7 +255,7 @@ export function printKiid(rootEl, options = {}) {
   copyStylesInto(idoc);
 
   const layout = idoc.createElement('style');
-  layout.textContent = PRINT_LAYOUT_CSS;
+  layout.textContent = PRINT_LAYOUT_CSS + (safari ? SAFARI_PRINT_CSS : '');
   idoc.head.appendChild(layout);
 
   const clone = /** @type {HTMLElement} */ (rootEl.cloneNode(true));
@@ -190,6 +272,7 @@ export function printKiid(rootEl, options = {}) {
   };
 
   const runPrint = () => {
+    sizeIframeToContent(iframe, idoc, clone);
     iwin.addEventListener('afterprint', cleanup);
     // Fallback if afterprint is delayed or missing.
     setTimeout(cleanup, 60_000);
@@ -198,9 +281,11 @@ export function printKiid(rootEl, options = {}) {
   };
 
   waitForStylesheets(idoc).then(() => {
-    // Allow layout/fonts one frame after styles apply.
+    // Allow layout/fonts a couple frames after styles apply (Safari needs more).
     requestAnimationFrame(() => {
-      setTimeout(runPrint, 50);
+      requestAnimationFrame(() => {
+        setTimeout(runPrint, safari ? 150 : 50);
+      });
     });
   });
 }
