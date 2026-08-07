@@ -18,4 +18,5 @@ Start with `README.md` for local setup.
 - Use `npm run dev` for local development.
 - There is no authentication and no Base44 backend dependency.
 - Document state persists in `localStorage` under `kiid-editor-state-v1`.
+- The editor preview is HTML+CSS only (`KiidPreview` + `kiid-document.css`); print/PDF uses the browser.
 - Run the relevant checks from `package.json` before finishing code changes.

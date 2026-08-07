@@ -1,58 +1,30 @@
 import React from 'react';
 import SrriScale from './SrriScale';
 import PerformanceChart from './PerformanceChart';
-
-const NAVY = '#1E2A56';
-const RED = '#C81E1E';
-const BLUE = '#005AB4';
-const LIGHTGREY = '#E1E1E1';
+import './kiid-document.css';
 
 function filterBullets(arr) {
   return (arr || []).filter((s) => String(s).trim() !== '');
 }
 
-// Visual primitives matching the tcolorbox redbox / bluebox in the template.
 function RedBox({ children }) {
-  return (
-    <div
-      className="bg-white"
-      style={{ border: `1px solid ${RED}`, padding: '8px 7px 7px 7px', marginBottom: 10 }}
-    >
-      {children}
-    </div>
-  );
-}
-function BlueBox({ children }) {
-  return (
-    <div
-      className="bg-white"
-      style={{ border: `1px solid ${BLUE}`, padding: '7px 6px', height: '100%' }}
-    >
-      {children}
-    </div>
-  );
+  return <div className="kiid-redbox">{children}</div>;
 }
 
-function Bullets({ items, columns = 1, fontSize = '11px' }) {
+function BlueBox({ children }) {
+  return <div className="kiid-bluebox">{children}</div>;
+}
+
+function Bullets({ items, columns = 1, size = '11' }) {
   const list = filterBullets(items);
-  if (list.length === 0) return <p style={{ fontSize, color: '#9aa0a6', fontStyle: 'italic' }}>(empty)</p>;
+  const sizeClass = size === '10' ? 'kiid-bullets--10' : 'kiid-bullets--11';
+  if (list.length === 0) {
+    return <p className={`kiid-bullets--empty ${sizeClass}`}>(empty)</p>;
+  }
   return (
-    <ul
-      style={{
-        fontSize,
-        lineHeight: 1.4,
-        margin: 0,
-        paddingLeft: '1.1em',
-        columnCount: columns,
-        columnGap: '12px',
-      }}
-    >
+    <ul className={`kiid-bullets ${sizeClass}${columns === 2 ? ' kiid-bullets--cols-2' : ''}`}>
       {list.map((b, i) => (
-        <li
-          key={i}
-          style={{ breakInside: 'avoid', marginBottom: 2 }}
-          dangerouslySetInnerHTML={{ __html: b }}
-        />
+        <li key={i} dangerouslySetInnerHTML={{ __html: b }} />
       ))}
     </ul>
   );
@@ -60,27 +32,19 @@ function Bullets({ items, columns = 1, fontSize = '11px' }) {
 
 function ChargeTable({ rows }) {
   return (
-    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10px' }}>
+    <table className="kiid-charges">
       <tbody>
         {rows.map((r, i) =>
           r.header ? (
-            <tr key={i}>
-              <td
-                colSpan={2}
-                style={{
-                  background: LIGHTGREY,
-                  fontWeight: 700,
-                  padding: '3px 4px',
-                  fontSize: '9.5px',
-                }}
-              >
-                {r.label}
-              </td>
+            <tr key={i} className="kiid-charges__header">
+              <td colSpan={2}>{r.label}</td>
             </tr>
           ) : (
-            <tr key={i}>
-              <td style={{ padding: '2px 4px' }}>{r.label}</td>
-              <td style={{ padding: '2px 4px', textAlign: 'right', whiteSpace: 'nowrap' }}>{r.value}%</td>
+            <tr key={i} className="kiid-charges__row">
+              <td>{r.label}</td>
+              <td className="kiid-charges__value">
+                {r.raw ? r.value : `${r.value}%`}
+              </td>
             </tr>
           )
         )}
@@ -90,23 +54,7 @@ function ChargeTable({ rows }) {
 }
 
 function Page({ children }) {
-  return (
-    <div
-      className="bg-white shadow-xl"
-      style={{
-        width: '794px',
-        minHeight: '1123px',
-        padding: '14px 16px',
-        boxSizing: 'border-box',
-        fontFamily: 'Helvetica, Arial, sans-serif',
-        color: '#000',
-        fontSize: '12px',
-        lineHeight: 1.35,
-      }}
-    >
-      {children}
-    </div>
-  );
+  return <div className="kiid-page">{children}</div>;
 }
 
 export default function KiidPreview({ data }) {
@@ -114,87 +62,84 @@ export default function KiidPreview({ data }) {
   const additional = filterBullets(d.additionalInfoBullets);
 
   return (
-    <div className="flex flex-col items-center gap-6 py-6">
+    <div className="kiid-doc">
       {/* ---------- PAGE 1 ---------- */}
       <Page>
-        {/* Header */}
-        <div className="flex items-center" style={{ marginBottom: 6 }}>
-          <div style={{ width: '28%' }}>
-            <span style={{ fontSize: '22px', fontWeight: 800, color: NAVY, lineHeight: 1 }}>EPIC</span>
-            <div style={{ fontSize: '10px', lineHeight: 1.15, marginTop: 2 }}>
+        <div className="kiid-header">
+          <div className="kiid-brand">
+            <span className="kiid-brand-name">EPIC</span>
+            <div className="kiid-brand-sub">
               Investment<br />Partners
             </div>
           </div>
-          <div style={{ width: '72%', textAlign: 'right' }}>
-            <div style={{ fontSize: '16px', fontWeight: 700 }}>
+          <div className="kiid-fund-meta">
+            <div className="kiid-fund-name">
               {d.subFundName || '\u00A0'} (the "Fund")
             </div>
-            <div style={{ fontSize: '11px' }}>
+            <div className="kiid-fund-line">
               {d.shareClassFullName || '\u00A0'} (ISIN: {d.isin || '\u00A0'})
             </div>
-            <div style={{ fontSize: '11px' }}>
+            <div className="kiid-fund-line">
               A sub-fund of {d.companyName || '\u00A0'} (the "Company")
             </div>
           </div>
         </div>
 
-        <div style={{ fontSize: '13px', fontWeight: 700 }}>Key Investor Information</div>
-        <p style={{ fontSize: '11px', marginTop: 2, marginBottom: 8 }}>
+        <div className="kiid-doc-title">Key Investor Information</div>
+        <p className="kiid-doc-intro">
           This document provides you with key investor information about this Fund. It is not
           marketing material. The information is required by law to help you understand the nature
           and the risks of investing in this Fund. You are advised to read it so you can make an
           informed decision about whether to invest.
         </p>
 
-        {/* Section I */}
         <RedBox>
-          <div style={{ fontWeight: 700, fontSize: '14px', marginBottom: 4 }}>
-            OBJECTIVES AND INVESTMENT POLICY
-          </div>
+          <div className="kiid-section-title">OBJECTIVES AND INVESTMENT POLICY</div>
           <Bullets items={d.objectivesBullets} columns={2} />
           {d.showRecommendation && (
-            <p style={{ fontSize: '11px', fontStyle: 'italic', marginTop: 6 }}>
+            <p className="kiid-p kiid-p--italic">
               Recommendation: This Fund may not be appropriate for investors who plan to withdraw
               their money in the short term (within {d.minInvestmentYears ?? 3} years). The Fund
               should be viewed as a medium or longer term investment.
             </p>
           )}
-          <p style={{ fontSize: '11px', marginTop: 6 }}>
+          <p className="kiid-p">
             <strong>Futures contracts:</strong> standardised contracts between two parties to buy
             or sell a specified asset of standardised quantity and quality for a price agreed today
             with delivery and payment occurring at a specified future delivery date.
           </p>
         </RedBox>
 
-        {/* Section II */}
         <RedBox>
-          <div className="flex" style={{ gap: 10 }}>
-            <div style={{ width: '47%' }}>
+          <div className="kiid-split">
+            <div className="kiid-split__left">
               <BlueBox>
-                <div style={{ fontWeight: 700, marginBottom: 4 }}>RISK AND REWARD PROFILE</div>
-                <div className="flex justify-between" style={{ fontSize: '10px', marginBottom: 6 }}>
+                <div className="kiid-section-title kiid-section-title--sm">
+                  RISK AND REWARD PROFILE
+                </div>
+                <div className="kiid-risk-labels">
                   <span>Lower risk</span>
                   <span>Higher risk</span>
                 </div>
-                <div className="flex justify-between" style={{ fontSize: '10px', marginBottom: 6 }}>
+                <div className="kiid-risk-labels">
                   <span>Potentially lower reward</span>
                   <span>Potentially higher reward</span>
                 </div>
                 <SrriScale srriCategory={d.srriCategory} />
-                <p style={{ fontSize: '10px', marginTop: 8 }}>
+                <p className="kiid-p kiid-p--sm kiid-p--tight">
                   The Fund is in category {d.srriCategory || '\u00A0'} as assets it holds have
                   historically been subject to higher levels of price fluctuation. The category shown
                   is not guaranteed and may change over time. It is based on historical data and may
                   not be a reliable indication of future circumstances. The lowest category does not
                   mean a risk free investment.
                 </p>
-                <p style={{ fontSize: '10px', marginTop: 6 }}>
+                <p className="kiid-p kiid-p--sm kiid-p--spaced">
                   The Fund is exposed to additional risks not captured by the risk indicator
                   including, without limitation:
                 </p>
               </BlueBox>
             </div>
-            <div style={{ width: '51%' }}>
+            <div className="kiid-split__right">
               <Bullets items={d.riskBullets} />
             </div>
           </div>
@@ -203,12 +148,11 @@ export default function KiidPreview({ data }) {
 
       {/* ---------- PAGE 2 ---------- */}
       <Page>
-        {/* Section III */}
         <RedBox>
-          <div className="flex" style={{ gap: 10 }}>
-            <div style={{ width: '47%' }}>
+          <div className="kiid-split">
+            <div className="kiid-split__left">
               <BlueBox>
-                <div style={{ fontWeight: 700, fontSize: '12px', marginBottom: 4 }}>
+                <div className="kiid-section-title kiid-section-title--sm">
                   CHARGES FOR THIS FUND
                 </div>
                 <ChargeTable
@@ -218,7 +162,7 @@ export default function KiidPreview({ data }) {
                     { label: 'Exit charge', value: d.exitCost },
                   ]}
                 />
-                <p style={{ fontSize: '9px', marginTop: 5 }}>
+                <p className="kiid-p--xs">
                   This is the maximum that might be taken out of your money before it is invested or
                   before the proceeds of your investment are paid out.
                 </p>
@@ -232,61 +176,70 @@ export default function KiidPreview({ data }) {
                 {d.performanceFeeRequired && (
                   <ChargeTable
                     rows={[
-                      { header: true, label: 'CHARGES TAKEN FROM THE FUND UNDER CERTAIN SPECIFIC CONDITIONS' },
-                      { label: 'Performance fee', value: `${d.performanceFeeValue}% of the Net New Profits (as defined in the Supplement).` },
-                      { label: 'Anti-Dilution Levy', value: `${d.antiDilutionLevy}% amount reflecting specific dealing costs.` },
+                      {
+                        header: true,
+                        label: 'CHARGES TAKEN FROM THE FUND UNDER CERTAIN SPECIFIC CONDITIONS',
+                      },
+                      {
+                        label: 'Performance fee',
+                        raw: true,
+                        value: `${d.performanceFeeValue}% of the Net New Profits (as defined in the Supplement).`,
+                      },
+                      {
+                        label: 'Anti-Dilution Levy',
+                        raw: true,
+                        value: `${d.antiDilutionLevy}% amount reflecting specific dealing costs.`,
+                      },
                     ]}
                   />
                 )}
               </BlueBox>
             </div>
-            <div style={{ width: '51%' }}>
-              <Bullets items={d.feesBullets} fontSize="10px" />
+            <div className="kiid-split__right">
+              <Bullets items={d.feesBullets} size="10" />
             </div>
           </div>
         </RedBox>
 
-        {/* Section IV */}
         <RedBox>
-          <div className="flex" style={{ gap: 10 }}>
-            <div style={{ width: '51%' }}>
+          <div className="kiid-split">
+            <div className="kiid-split__left--wide">
               <BlueBox>
-                <div style={{ fontWeight: 700, marginBottom: 4 }}>PAST PERFORMANCE</div>
+                <div className="kiid-section-title kiid-section-title--sm">
+                  PAST PERFORMANCE
+                </div>
                 <PerformanceChart years={d.performanceYears} />
               </BlueBox>
             </div>
-            <div style={{ width: '47%' }}>
+            <div className="kiid-split__right--narrow">
               <Bullets items={d.performanceBullets} />
             </div>
           </div>
         </RedBox>
 
-        {/* Section V */}
         <RedBox>
-          <div style={{ fontWeight: 700, fontSize: '12px', marginBottom: 4 }}>PRACTICAL INFORMATION</div>
-          <Bullets items={d.practicalBullets} columns={2} fontSize="10px" />
+          <div className="kiid-section-title kiid-section-title--md">PRACTICAL INFORMATION</div>
+          <Bullets items={d.practicalBullets} columns={2} size="10" />
         </RedBox>
 
-        {/* Section VI (only if non-empty) */}
         {additional.length > 0 && (
           <RedBox>
-            <div style={{ fontWeight: 700, fontSize: '12px', marginBottom: 4 }}>
+            <div className="kiid-section-title kiid-section-title--md">
               ADDITIONAL INFORMATION
             </div>
-            <Bullets items={additional} columns={2} fontSize="10px" />
+            <Bullets items={additional} columns={2} size="10" />
           </RedBox>
         )}
 
-        {/* Regulatory statement */}
         <RedBox>
-          <div style={{ background: LIGHTGREY, padding: '6px 8px' }}>
-            <p style={{ fontSize: '10px', fontWeight: 700 }}>
+          <div className="kiid-regulatory">
+            <p>
               The Company and the Fund are authorised and regulated by {d.regulatorName}.{' '}
               {d.managementCompanyName} is authorised in {d.regulatorJurisdiction} and regulated by{' '}
               {d.regulatorName} as an Undertaking for Collective Investment in Transferable
               Securities Fund Manager.
             </p>
-            <p style={{ fontSize: '10px', fontWeight: 700, marginTop: 6 }}>
+            <p>
               This key investor information is accurate as at {d.accurateAsOfDate}.
             </p>
           </div>

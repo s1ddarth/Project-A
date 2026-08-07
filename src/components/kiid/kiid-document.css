@@ -1,0 +1,234 @@
+/* UCITS KIID document stylesheet — HTML/CSS layout for on-screen preview and print. */
+
+.kiid-doc {
+  --kiid-navy: #1e2a56;
+  --kiid-red: #c81e1e;
+  --kiid-blue: #005ab4;
+  --kiid-grey: #e1e1e1;
+  --kiid-muted: #9aa0a6;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 1.5rem 0;
+  font-family: Helvetica, Arial, sans-serif;
+  color: #000;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.kiid-page {
+  width: 794px;
+  min-height: 1123px;
+  padding: 14px 16px;
+  box-sizing: border-box;
+  background: #fff;
+  box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+}
+
+.kiid-redbox {
+  background: #fff;
+  border: 1px solid var(--kiid-red);
+  padding: 8px 7px 7px;
+  margin-bottom: 10px;
+}
+
+.kiid-bluebox {
+  background: #fff;
+  border: 1px solid var(--kiid-blue);
+  padding: 7px 6px;
+  height: 100%;
+}
+
+/* Header */
+.kiid-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.kiid-brand {
+  width: 28%;
+}
+
+.kiid-brand-name {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--kiid-navy);
+  line-height: 1;
+}
+
+.kiid-brand-sub {
+  font-size: 10px;
+  line-height: 1.15;
+  margin-top: 2px;
+}
+
+.kiid-fund-meta {
+  width: 72%;
+  text-align: right;
+}
+
+.kiid-fund-name {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.kiid-fund-line {
+  font-size: 11px;
+}
+
+.kiid-doc-title {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.kiid-doc-intro {
+  font-size: 11px;
+  margin-top: 2px;
+  margin-bottom: 8px;
+}
+
+/* Section headings */
+.kiid-section-title {
+  font-weight: 700;
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+
+.kiid-section-title--sm {
+  font-size: 12px;
+}
+
+.kiid-section-title--md {
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+
+/* Two-column layouts */
+.kiid-split {
+  display: flex;
+  gap: 10px;
+}
+
+.kiid-split__left {
+  width: 47%;
+}
+
+.kiid-split__right {
+  width: 51%;
+}
+
+.kiid-split__left--wide {
+  width: 51%;
+}
+
+.kiid-split__right--narrow {
+  width: 47%;
+}
+
+/* Body copy */
+.kiid-p {
+  font-size: 11px;
+  margin-top: 6px;
+}
+
+.kiid-p--italic {
+  font-style: italic;
+}
+
+.kiid-p--sm {
+  font-size: 10px;
+}
+
+.kiid-p--xs {
+  font-size: 9px;
+  margin-top: 5px;
+}
+
+.kiid-p--tight {
+  margin-top: 8px;
+}
+
+.kiid-p--spaced {
+  margin-top: 6px;
+}
+
+/* Risk labels above SRRI scale */
+.kiid-risk-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  margin-bottom: 6px;
+}
+
+/* Bullet lists */
+.kiid-bullets {
+  margin: 0;
+  padding-left: 1.1em;
+  line-height: 1.4;
+}
+
+.kiid-bullets--cols-2 {
+  column-count: 2;
+  column-gap: 12px;
+}
+
+.kiid-bullets li {
+  break-inside: avoid;
+  margin-bottom: 2px;
+}
+
+.kiid-bullets--empty {
+  color: var(--kiid-muted);
+  font-style: italic;
+  margin: 0;
+}
+
+.kiid-bullets--11 {
+  font-size: 11px;
+}
+
+.kiid-bullets--10 {
+  font-size: 10px;
+}
+
+/* Charges table */
+.kiid-charges {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 10px;
+}
+
+.kiid-charges__header td {
+  background: var(--kiid-grey);
+  font-weight: 700;
+  padding: 3px 4px;
+  font-size: 9.5px;
+}
+
+.kiid-charges__row td {
+  padding: 2px 4px;
+}
+
+.kiid-charges__value {
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* Regulatory footer block */
+.kiid-regulatory {
+  background: var(--kiid-grey);
+  padding: 6px 8px;
+}
+
+.kiid-regulatory p {
+  font-size: 10px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.kiid-regulatory p + p {
+  margin-top: 6px;
+}

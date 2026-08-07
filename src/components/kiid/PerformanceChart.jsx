@@ -11,7 +11,7 @@ import {
 
 const NAVY = '#1E2A56';
 
-// Mirrors the pgfplots bar chart in the LaTeX template: navy bars, -20..20 axis.
+// Past-performance bar chart for the KIID preview: navy bars, -20..20 axis.
 export default function PerformanceChart({ years }) {
   const data = (years || [])
     .filter((y) => y && (y.year || y.year === 0))

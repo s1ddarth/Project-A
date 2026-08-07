@@ -7,12 +7,12 @@ import KiidPreview from '@/components/kiid/KiidPreview';
 
 // Controlled split-screen editor used as the final step of the KIID workflow.
 // The parent owns the document data; this component owns preview status, the
-// on-screen A4 page containers, and the print/export action.
+// on-screen A4 page containers, and the print/export action. The document is
+// rendered as HTML+CSS (see KiidPreview + kiid-document.css).
 function StatusIndicator({ status }) {
   const map = {
-    compiling: { label: 'Compiling…', icon: Loader2, className: 'text-amber-600', spin: true },
-    'up-to-date': { label: 'Up to date', icon: CheckCircle2, className: 'text-emerald-600', spin: false },
-    error: { label: 'Compile error', icon: AlertCircle, className: 'text-red-600', spin: false },
+    updating: { label: 'Updating…', icon: Loader2, className: 'text-amber-600', spin: true },
+    'up-to-date': { label: 'Live preview', icon: CheckCircle2, className: 'text-emerald-600', spin: false },
   };
   const s = map[status] || map['up-to-date'];
   const Icon = s.icon;
@@ -57,14 +57,14 @@ export default function KiidEditor({ data, update, onBack, onReset }) {
   const previewRef = useRef(null);
   const firstRun = useRef(true);
 
-  // Debounced "compiling → up-to-date" indicator driven by data changes.
+  // Brief "Updating…" flash when form data changes (HTML preview is live).
   useEffect(() => {
     if (firstRun.current) {
       firstRun.current = false;
       return;
     }
-    setStatus('compiling');
-    const t = setTimeout(() => setStatus('up-to-date'), 700);
+    setStatus('updating');
+    const t = setTimeout(() => setStatus('up-to-date'), 400);
     return () => clearTimeout(t);
   }, [JSON.stringify(data)]);
 
@@ -73,7 +73,7 @@ export default function KiidEditor({ data, update, onBack, onReset }) {
     const root = previewRef.current;
     if (!root) return;
     const measure = () => {
-      const pages = root.querySelectorAll('.bg-white.shadow-xl');
+      const pages = root.querySelectorAll('.kiid-page');
       const overs = Array.from(pages).map((p) =>
         Math.max(0, (p.offsetHeight - A4_HEIGHT_PX) / PX_PER_MM)
       );

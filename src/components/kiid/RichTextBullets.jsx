@@ -3,9 +3,9 @@ import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 
 // One Quill instance per narrative section. Each paragraph (<p>) in the editor
-// maps to one bullet in the data model, so the existing <ul><li> preview and the
-// LaTeX bullet list are preserved. Rich formatting (colour, weight) is stored
-// as inline HTML in each bullet string.
+// maps to one bullet in the data model, rendered as <ul><li> in the HTML
+// preview. Rich formatting (colour, weight) is stored as inline HTML in each
+// bullet string.
 
 const MODULES = {
   toolbar: [

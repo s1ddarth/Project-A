@@ -94,7 +94,7 @@
 /* On screen, render each KIID page as a fixed A4 sheet whose content box
    matches the printer's printable area (210mm sheet, 12mm/14mm margins →
    182×273mm). */
-.kiid-print-root .bg-white.shadow-xl {
+.kiid-print-root .kiid-page {
   width: 210mm !important;
   min-height: 297mm !important;
   padding: 12mm 14mm !important;
@@ -104,7 +104,7 @@
   margin: 0 auto;
 }
 /* Visible boundary between page 1 and page 2. */
-.kiid-print-root > div {
+.kiid-print-root .kiid-doc {
   gap: 14mm !important;
 }
 
@@ -122,7 +122,7 @@
 
   /* Reset the on-screen page containers so content flows into the @page
      printable area and the browser paginates it natively. */
-  .kiid-print-root .bg-white.shadow-xl {
+  .kiid-print-root .kiid-page {
     width: auto !important;
     min-height: 0 !important;
     height: auto !important;
@@ -131,20 +131,20 @@
     margin: 0 !important;
     background: transparent !important;
   }
-  .kiid-print-root > div {
+  .kiid-print-root .kiid-doc {
     gap: 0 !important;
     padding: 0 !important;
   }
   /* Page 2 starts on a new physical sheet. */
-  .kiid-print-root .bg-white.shadow-xl:nth-of-type(2) {
+  .kiid-print-root .kiid-page:nth-of-type(2) {
     break-before: page;
   }
   /* KIID sections never split across a page boundary. */
-  .kiid-print-root .bg-white:not(.shadow-xl) {
+  .kiid-print-root .kiid-redbox {
     break-inside: avoid;
   }
   /* Suppress trailing margins at break points to avoid white space. */
-  .kiid-print-root .bg-white.shadow-xl > .bg-white:last-child {
+  .kiid-print-root .kiid-page > .kiid-redbox:last-child {
     margin-bottom: 0 !important;
   }
 }
