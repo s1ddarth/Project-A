@@ -114,10 +114,14 @@
 }
 
 @media print {
-  html, body {
+  /* Fallback for browser Ctrl/Cmd+P (primary path is iframe printKiid).
+     Unclip flex/overflow ancestors that Firefox/WebKit otherwise truncate. */
+  html, body, #root {
     height: auto !important;
     overflow: visible !important;
     background: #ffffff !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
 
   /* Reset the on-screen page containers so content flows into the @page
@@ -138,13 +142,33 @@
   /* Page 2 starts on a new physical sheet. */
   .kiid-print-root .kiid-page:nth-of-type(2) {
     break-before: page;
+    page-break-before: always;
   }
-  /* KIID sections never split across a page boundary. */
+  /* Soft fragmentation: avoid only small units. Blanket avoid on tall
+     .kiid-redbox sections can make Firefox/WebKit omit them entirely. */
   .kiid-print-root .kiid-redbox {
+    break-inside: auto;
+    page-break-inside: auto;
+  }
+  .kiid-print-root .kiid-header,
+  .kiid-print-root .kiid-charges,
+  .kiid-print-root .kiid-regulatory,
+  .kiid-print-root .kiid-perf-chart,
+  .kiid-print-root .kiid-bullets li {
     break-inside: avoid;
+    page-break-inside: avoid;
   }
   /* Suppress trailing margins at break points to avoid white space. */
   .kiid-print-root .kiid-page > .kiid-redbox:last-child {
     margin-bottom: 0 !important;
+  }
+
+  .kiid-perf-chart,
+  .kiid-perf-chart .recharts-responsive-container,
+  .kiid-perf-chart .recharts-wrapper {
+    width: 100% !important;
+    height: 150px !important;
+    min-height: 150px !important;
+    overflow: visible !important;
   }
 }

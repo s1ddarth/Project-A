@@ -2,13 +2,15 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Printer, Loader2, CheckCircle2, AlertCircle, ArrowLeft, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { printKiid, kiidPrintTitle } from '@/lib/printKiid';
 import KiidForm from '@/components/kiid/KiidForm';
 import KiidPreview from '@/components/kiid/KiidPreview';
 
 // Controlled split-screen editor used as the final step of the KIID workflow.
 // The parent owns the document data; this component owns preview status, the
 // on-screen A4 page containers, and the print/export action. The document is
-// rendered as HTML+CSS (see KiidPreview + kiid-document.css).
+// rendered as HTML+CSS (see KiidPreview + kiid-document.css). Print uses an
+// isolated iframe (see printKiid) to avoid Firefox/WebKit overflow clipping.
 function StatusIndicator({ status }) {
   const map = {
     updating: { label: 'Updating…', icon: Loader2, className: 'text-amber-600', spin: true },
@@ -86,7 +88,7 @@ export default function KiidEditor({ data, update, onBack, onReset }) {
   }, [JSON.stringify(data)]);
 
   const handlePrint = () => {
-    window.print();
+    printKiid(previewRef.current, { title: kiidPrintTitle(data) });
   };
 
   return (
