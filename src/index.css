@@ -127,6 +127,7 @@
   /* Reset the on-screen page containers so content flows into the @page
      printable area and the browser paginates it natively. */
   .kiid-print-root .kiid-page {
+    display: block !important;
     width: auto !important;
     min-height: 0 !important;
     height: auto !important;
@@ -134,18 +135,25 @@
     box-shadow: none !important;
     margin: 0 !important;
     background: transparent !important;
+    overflow: visible !important;
   }
   .kiid-print-root .kiid-doc {
+    display: block !important;
     gap: 0 !important;
     padding: 0 !important;
   }
   /* Page 2 starts on a new physical sheet. */
+  .kiid-print-root .kiid-page:first-of-type {
+    break-after: page;
+    page-break-after: always;
+  }
   .kiid-print-root .kiid-page:nth-of-type(2) {
     break-before: page;
     page-break-before: always;
   }
   /* Soft fragmentation: avoid only small units. Blanket avoid on tall
-     .kiid-redbox sections can make Firefox/WebKit omit them entirely. */
+     .kiid-redbox sections can make Firefox omit them entirely.
+     Safari print uses iframe + inline-block keep-together in printKiid.js. */
   .kiid-print-root .kiid-redbox {
     break-inside: auto;
     page-break-inside: auto;
@@ -154,6 +162,7 @@
   .kiid-print-root .kiid-charges,
   .kiid-print-root .kiid-regulatory,
   .kiid-print-root .kiid-perf-chart,
+  .kiid-print-root .kiid-perf-chart svg,
   .kiid-print-root .kiid-bullets li {
     break-inside: avoid;
     page-break-inside: avoid;
@@ -169,6 +178,6 @@
     width: 100% !important;
     height: 150px !important;
     min-height: 150px !important;
-    overflow: visible !important;
+    overflow: hidden !important;
   }
 }
