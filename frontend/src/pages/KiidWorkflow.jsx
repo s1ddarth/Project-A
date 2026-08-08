@@ -10,15 +10,6 @@ import { defaultData, sampleData } from '@/lib/kiidData';
 
 const STEPS = ['Product', 'Production', 'Validation', 'Editor'];
 const STORAGE_KEY = 'kiid-editor-state-v1';
-const EDITOR_STEP = 3;
-
-// TODO: Remove this before merging
-/** Dev shortcut: `?editor` (or `?step=editor`) opens the KIID editor immediately. */
-function wantsEditorSkip() {
-  if (typeof window === 'undefined') return false;
-  const params = new URLSearchParams(window.location.search);
-  return params.has('editor') || params.get('step') === 'editor';
-}
 
 function loadState() {
   try {
@@ -62,7 +53,7 @@ const NAV_FINDINGS_BY_DEMO = {
 const STUB_SRRI = '4';
 
 export default function KiidWorkflow() {
-  const [step, setStep] = useState(() => (wantsEditorSkip() ? EDITOR_STEP : 0));
+  const [step, setStep] = useState(0);
   const [data, setData] = useState(loadState);
   const [product, setProduct] = useState('ucits_kiid');
   const [mode, setMode] = useState('single');
@@ -116,7 +107,7 @@ export default function KiidWorkflow() {
 
   // The editor step takes over the full screen with its own header (preview +
   // download), so it is rendered outside the stepper shell.
-  if (step === EDITOR_STEP) {
+  if (step === 3) {
     return <KiidEditor data={data} update={update} onBack={() => setStep(2)} onReset={reset} />;
   }
 
@@ -182,7 +173,7 @@ export default function KiidWorkflow() {
             </Button>
           )}
           {step === 2 && (
-            <Button onClick={() => setStep(EDITOR_STEP)} disabled={!canProceed}>
+            <Button onClick={() => setStep(3)} disabled={!canProceed}>
               Proceed to editor <ArrowRight className="h-4 w-4 ml-1" />
             </Button>
           )}
