@@ -130,7 +130,8 @@ export default function KiidEditor({ data, update, onBack, onReset }) {
             <div className="h-12" />
           </div>
         </div>
-        <div className="w-[55%] bg-slate-200/60 overflow-auto h-full print:w-auto print:h-auto print:overflow-visible print:bg-transparent print:block">
+        {/* TODO: Clean up this CSS */}
+        <div className="w-[55%] bg-slate-200/60 overflow-auto h-full flex flex-col items-center print:w-auto print:h-auto print:overflow-visible print:bg-transparent print:block print:items-stretch">
           <OverflowIndicator overflow={overflow} />
           <div ref={previewRef} className="kiid-print-root inline-block print:block">
             <KiidPreview data={data} />
