@@ -102,6 +102,7 @@ export default function KiidPreview({ data }) {
           </p>
         </div>
 
+        {/* Section: Risk and Reward Profile */}
         <div className="kiid-section">
           <div className="kiid-section-title">
             RISK AND REWARD PROFILE
@@ -138,67 +139,75 @@ export default function KiidPreview({ data }) {
 
       {/* ---------- PAGE 2 ---------- */}
       <Page>
-        <div className="kiid-split">
-          <div className="kiid-split__left">
-            <div className="kiid-section-title">
-              CHARGES FOR THIS FUND
-            </div>
-            <ChargeTable
-              rows={[
-                { header: true, label: 'ONE-OFF CHARGES TAKEN BEFORE OR AFTER YOU INVEST' },
-                { label: 'Entry charge', value: d.entryCost },
-                { label: 'Exit charge', value: d.exitCost },
-              ]}
-            />
-            <p className="kiid-p--xs">
-              This is the maximum that might be taken out of your money before it is invested or
-              before the proceeds of your investment are paid out.
-            </p>
-            <ChargeTable
-              rows={[
-                { header: true, label: 'CHARGES TAKEN FROM THE SHARE CLASS OVER A YEAR' },
-                { label: 'Ongoing charges', value: d.ongoingCost },
-                { label: 'Transaction costs', value: d.transactionCost },
-              ]}
-            />
-            {d.performanceFeeRequired && (
+
+        {/* Section: Charges for this fund */}
+        <div className="kiid-section">
+          <div className="kiid-section-title">
+            CHARGES FOR THIS FUND
+          </div>
+          <div className="kiid-split">
+            <div className="kiid-split__left">
               <ChargeTable
                 rows={[
-                  {
-                    header: true,
-                    label: 'CHARGES TAKEN FROM THE FUND UNDER CERTAIN SPECIFIC CONDITIONS',
-                  },
-                  {
-                    label: 'Performance fee',
-                    raw: true,
-                    value: `${d.performanceFeeValue}% of the Net New Profits (as defined in the Supplement).`,
-                  },
-                  {
-                    label: 'Anti-Dilution Levy',
-                    raw: true,
-                    value: `${d.antiDilutionLevy}% amount reflecting specific dealing costs.`,
-                  },
+                  { header: true, label: 'ONE-OFF CHARGES TAKEN BEFORE OR AFTER YOU INVEST' },
+                  { label: 'Entry charge', value: d.entryCost },
+                  { label: 'Exit charge', value: d.exitCost },
                 ]}
               />
-            )}
-          </div>
-          <div className="kiid-split__right">
-            <Bullets items={d.feesBullets} size="10" />
-          </div>
-        </div>
-
-        <div className="kiid-split">
-          <div className="kiid-split__left--wide">
-            <div className="kiid-section-title">
-              PAST PERFORMANCE
+              <p className="kiid-p--xs">
+                This is the maximum that might be taken out of your money before it is invested or
+                before the proceeds of your investment are paid out.
+              </p>
+              <ChargeTable
+                rows={[
+                  { header: true, label: 'CHARGES TAKEN FROM THE SHARE CLASS OVER A YEAR' },
+                  { label: 'Ongoing charges', value: d.ongoingCost },
+                  { label: 'Transaction costs', value: d.transactionCost },
+                ]}
+              />
+              {d.performanceFeeRequired && (
+                <ChargeTable
+                  rows={[
+                    {
+                      header: true,
+                      label: 'CHARGES TAKEN FROM THE FUND UNDER CERTAIN SPECIFIC CONDITIONS',
+                    },
+                    {
+                      label: 'Performance fee',
+                      raw: true,
+                      value: `${d.performanceFeeValue}% of the Net New Profits (as defined in the Supplement).`,
+                    },
+                    {
+                      label: 'Anti-Dilution Levy',
+                      raw: true,
+                      value: `${d.antiDilutionLevy}% amount reflecting specific dealing costs.`,
+                    },
+                  ]}
+                />
+              )}
             </div>
-            <PerformanceChart years={d.performanceYears} />
-          </div>
-          <div className="kiid-split__right--narrow">
-            <Bullets items={d.performanceBullets} />
+            <div className="kiid-split__right">
+              <Bullets items={d.feesBullets} size="10" />
+            </div>
           </div>
         </div>
 
+        {/* Section: Past performance */}
+				<div className="kiid-section">
+					<div className="kiid-section-title">
+						PAST PERFORMANCE
+					</div>
+					<div className="kiid-split">
+						<div className="kiid-split__left--wide">
+							<PerformanceChart years={d.performanceYears} />
+						</div>
+						<div className="kiid-split__right--narrow">
+							<Bullets items={d.performanceBullets} />
+						</div>
+					</div>
+				</div>
+
+        {/* Section: Practical information */}
         <div className="kiid-section">
           <div className="kiid-section-title ">PRACTICAL INFORMATION</div>
           <Bullets items={d.practicalBullets} columns={2} size="10" />
