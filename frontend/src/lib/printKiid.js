@@ -240,6 +240,10 @@ export function printKiid(rootEl, options = {}) {
 
   const clone = /** @type {HTMLElement} */ (rootEl.cloneNode(true));
   clone.classList.add('kiid-print-root');
+  // Preview fit-to-width scale lives on an ancestor outside this root — ensure
+  // the print clone never inherits a transform from on-screen chrome.
+  clone.style.transform = 'none';
+  clone.style.width = '';
   idoc.body.appendChild(clone);
 
   let cleaned = false;

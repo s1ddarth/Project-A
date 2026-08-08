@@ -28,10 +28,13 @@ function StatusIndicator({ status }) {
 }
 
 const PX_PER_MM = 96 / 25.4;
+const A4_WIDTH_PX = 210 * PX_PER_MM;
 const A4_HEIGHT_PX = 297 * PX_PER_MM;
+/** Horizontal inset inside the preview pane so the scaled page is not flush. */
+const PREVIEW_PAD_X = 24;
 
 const OVERFLOW_BANNER_BASE =
-  'print:hidden sticky top-0 z-10 mx-auto max-w-[210mm] mb-3 flex items-center gap-2 rounded-md border px-3 py-1.5 text-xs font-medium';
+  'print:hidden sticky top-0 z-10 w-full max-w-full mb-3 flex items-center gap-2 rounded-md border px-3 py-1.5 text-xs font-medium';
 
 // Live indicator: a UCITS KIID must fit on exactly 2 pages, so warn when the
 // content overflows its A4 page containers.
@@ -68,6 +71,9 @@ function OverflowIndicator({ overflow }) {
 export default function KiidEditor({ data, update, onBack, onReset }) {
   const [status, setStatus] = useState('up-to-date');
   const [overflow, setOverflow] = useState({ pages: [0, 0] });
+  const [previewScale, setPreviewScale] = useState(1);
+  const [scaleShellHeight, setScaleShellHeight] = useState(0);
+  const previewPaneRef = useRef(null);
   const previewRef = useRef(null);
   const firstRun = useRef(true);
 
@@ -82,24 +88,39 @@ export default function KiidEditor({ data, update, onBack, onReset }) {
     return () => clearTimeout(t);
   }, [JSON.stringify(data)]);
 
-  // Measure each A4 page container; flag overflow when content exceeds 297mm.
+  // Fit-to-width scale for the fixed A4 preview inside the pane.
+  // Transform is applied outside `.kiid-print-root` so printKiid clones
+  // unscaled markup. Overflow uses unscaled offsetHeight (transforms do not
+  // affect layout metrics).
   useEffect(() => {
+    const pane = previewPaneRef.current;
     const root = previewRef.current;
-    if (!root) return;
+    if (!pane || !root) return;
+
     const measure = () => {
+      const available = Math.max(0, pane.clientWidth - PREVIEW_PAD_X * 2);
+      const scale = available > 0 ? Math.min(1, available / A4_WIDTH_PX) : 1;
+      setPreviewScale(scale);
+
       const pages = root.querySelectorAll('.kiid-page');
       const overs = Array.from(pages).map((p) =>
         Math.max(0, (p.offsetHeight - A4_HEIGHT_PX) / PX_PER_MM)
       );
       setOverflow({ pages: overs });
+
+      // Layout height is unscaled; shrink the shell so scroll matches visuals.
+      setScaleShellHeight(Math.ceil(root.offsetHeight * scale));
     };
+
     measure();
     const ro = new ResizeObserver(measure);
+    ro.observe(pane);
     ro.observe(root);
     return () => ro.disconnect();
   }, [JSON.stringify(data)]);
 
   const handlePrint = () => {
+    // Clone the unscaled print root — scale wrapper is a sibling ancestor only.
     printKiid(previewRef.current, { title: kiidPrintTitle(data) });
   };
 
@@ -142,10 +163,25 @@ export default function KiidEditor({ data, update, onBack, onReset }) {
             <div className="h-12" />
           </div>
         </div>
-        <div className="kiid-editor__preview">
-          <OverflowIndicator overflow={overflow} />
-          <div ref={previewRef} className="kiid-editor__print-root kiid-print-root">
-            <KiidPreview data={data} />
+        <div ref={previewPaneRef} className="kiid-editor__preview">
+          <div className="kiid-editor__preview-inner">
+            <OverflowIndicator overflow={overflow} />
+            <div
+              className="kiid-editor__preview-scale-shell"
+              style={{ height: scaleShellHeight || undefined }}
+            >
+              <div
+                className="kiid-editor__preview-scale"
+                style={{
+                  transform: `scale(${previewScale})`,
+                  width: '210mm',
+                }}
+              >
+                <div ref={previewRef} className="kiid-editor__print-root kiid-print-root">
+                  <KiidPreview data={data} />
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>

@@ -8,21 +8,25 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 1.5rem;
-  padding: 1.5rem 0;
+  gap: 14mm;
+  padding: 0;
   font-family: Helvetica, Arial, sans-serif;
   color: #000;
   font-size: 12px;
   line-height: 1.35;
 }
 
+/* Fixed A4 sheet — preview and print share this geometry.
+   Padding matches @page margins (12mm/14mm) so on-screen content
+   mirrors the printable area (182×273mm). */
 .kiid-page {
-  width: 794px;
-  min-height: 1123px;
-  padding: 14px 16px;
+  width: 210mm;
+  min-height: 297mm;
+  padding: 12mm 14mm;
   box-sizing: border-box;
   background: #fff;
-  box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(0, 0, 0, 0.08);
+  margin: 0 auto;
 }
 
 .kiid-section {
