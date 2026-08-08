@@ -124,6 +124,7 @@ export default function KiidPreview({ data }) {
                 <span>Potentially lower reward</span>
                 <span>Potentially higher reward</span>
               </div>
+              {/* TODO: This needs to be computed from the Python script, and attached as an image */}
               <SrriScale srriCategory={d.srriCategory} />
               <p className="kiid-p kiid-p--sm kiid-p--tight">
                 The Fund is in category {d.srriCategory || '\u00A0'} as assets it holds have
@@ -208,6 +209,7 @@ export default function KiidPreview({ data }) {
           <Divider />
 					<div className="kiid-split">
 						<div className="kiid-split__left--wide">
+              {/* TODO: This needs to be computed from the Python script, and attached as an image */}
 							<PerformanceChart years={d.performanceYears} />
 						</div>
 						<div className="kiid-split__right--narrow">
