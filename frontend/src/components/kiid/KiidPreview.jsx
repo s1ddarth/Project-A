@@ -104,7 +104,7 @@ export default function KiidPreview({ data }) {
 
         <div className="kiid-split">
           <div className="kiid-split__left">
-            <div className="kiid-section-title kiid-section-title--sm">
+            <div className="kiid-section-title">
               RISK AND REWARD PROFILE
             </div>
             <div className="kiid-risk-labels">
@@ -138,7 +138,7 @@ export default function KiidPreview({ data }) {
       <Page>
         <div className="kiid-split">
           <div className="kiid-split__left">
-            <div className="kiid-section-title kiid-section-title--sm">
+            <div className="kiid-section-title">
               CHARGES FOR THIS FUND
             </div>
             <ChargeTable
@@ -187,7 +187,7 @@ export default function KiidPreview({ data }) {
 
         <div className="kiid-split">
           <div className="kiid-split__left--wide">
-            <div className="kiid-section-title kiid-section-title--sm">
+            <div className="kiid-section-title">
               PAST PERFORMANCE
             </div>
             <PerformanceChart years={d.performanceYears} />
@@ -198,15 +198,15 @@ export default function KiidPreview({ data }) {
         </div>
 
         <div className="kiid-section">
-          <div className="kiid-section-title kiid-section-title--md">PRACTICAL INFORMATION</div>
+          <div className="kiid-section-title ">PRACTICAL INFORMATION</div>
           <Bullets items={d.practicalBullets} columns={2} size="10" />
         </div>
 
         {additional.length > 0 && (
           <div className="kiid-section">
-            <div className="kiid-section-title kiid-section-title--md">
+            {/* <div className="kiid-section-title">
               ADDITIONAL INFORMATION
-            </div>
+            </div> */}
             <Bullets items={additional} columns={2} size="10" />
           </div>
         )}
