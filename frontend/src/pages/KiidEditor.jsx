@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils';
 import { printKiid, kiidPrintTitle } from '@/lib/printKiid';
 import KiidForm from '@/components/kiid/KiidForm';
 import KiidPreview from '@/components/kiid/KiidPreview';
+import './kiid-editor.css';
 
 // Controlled split-screen editor used as the final step of the KIID workflow.
 // The parent owns the document data; this component owns preview status, the
@@ -29,6 +30,9 @@ function StatusIndicator({ status }) {
 const PX_PER_MM = 96 / 25.4;
 const A4_HEIGHT_PX = 297 * PX_PER_MM;
 
+const OVERFLOW_BANNER_BASE =
+  'print:hidden sticky top-0 z-10 mx-auto max-w-[210mm] mb-3 flex items-center gap-2 rounded-md border px-3 py-1.5 text-xs font-medium';
+
 // Live indicator: a UCITS KIID must fit on exactly 2 pages, so warn when the
 // content overflows its A4 page containers.
 function OverflowIndicator({ overflow }) {
@@ -37,17 +41,25 @@ function OverflowIndicator({ overflow }) {
     .filter((p) => p.mm > 0.5);
   if (over.length === 0) {
     return (
-      <div className="print:hidden sticky top-0 z-10 mx-auto max-w-[210mm] mb-3 flex items-center gap-2 rounded-md bg-emerald-50 border border-emerald-200 px-3 py-1.5 text-xs font-medium text-emerald-700">
+      <div
+        className={cn(
+          OVERFLOW_BANNER_BASE,
+          'bg-emerald-50 border-emerald-200 text-emerald-700'
+        )}
+      >
         <CheckCircle2 className="h-4 w-4" />
         Fits on 2 pages
       </div>
     );
   }
   return (
-    <div className="print:hidden sticky top-0 z-10 mx-auto max-w-[210mm] mb-3 flex items-center gap-2 rounded-md bg-red-50 border border-red-200 px-3 py-1.5 text-xs font-medium text-red-700">
+    <div
+      className={cn(OVERFLOW_BANNER_BASE, 'bg-red-50 border-red-200 text-red-700')}
+    >
       <AlertCircle className="h-4 w-4" />
       <span>
-        Overflow: page {over[0].i + 1} exceeds A4 by ~{Math.round(over[0].mm)}mm — will not fit on 2 pages.
+        Overflow: page {over[0].i + 1} exceeds A4 by ~{Math.round(over[0].mm)}mm — will not fit on 2
+        pages.
       </span>
     </div>
   );
@@ -92,8 +104,8 @@ export default function KiidEditor({ data, update, onBack, onReset }) {
   };
 
   return (
-    <div className="h-full flex flex-col bg-background print:h-auto print:block print:overflow-visible">
-      <header className="flex items-center justify-between gap-4 px-5 h-14 border-b bg-card shrink-0 print:hidden">
+    <div className="kiid-editor">
+      <header className="kiid-editor__header">
         <div className="flex items-center gap-3 min-w-0">
           {onBack && (
             <Button variant="ghost" size="sm" onClick={onBack}>
@@ -123,17 +135,16 @@ export default function KiidEditor({ data, update, onBack, onReset }) {
         </div>
       </header>
 
-      <div className="flex-1 flex min-h-0 print:h-auto print:block">
-        <div className="w-[45%] overflow-y-auto border-r bg-muted/20 print:hidden">
-          <div className="p-5 max-w-2xl mx-auto">
+      <div className="kiid-editor__body">
+        <div className="kiid-editor__form">
+          <div className="kiid-editor__form-inner">
             <KiidForm data={data} update={update} />
             <div className="h-12" />
           </div>
         </div>
-        {/* TODO: Clean up this CSS */}
-        <div className="w-[55%] bg-slate-200/60 overflow-auto h-full flex flex-col items-center print:w-auto print:h-auto print:overflow-visible print:bg-transparent print:block print:items-stretch">
+        <div className="kiid-editor__preview">
           <OverflowIndicator overflow={overflow} />
-          <div ref={previewRef} className="kiid-print-root inline-block print:block">
+          <div ref={previewRef} className="kiid-editor__print-root kiid-print-root">
             <KiidPreview data={data} />
           </div>
         </div>
