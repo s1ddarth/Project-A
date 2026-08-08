@@ -89,24 +89,8 @@
   }
 }
 
-/* ---------- KIID: on-screen A4 pages + native print pagination ---------- */
-
-/* On screen, render each KIID page as a fixed A4 sheet whose content box
-   matches the printer's printable area (210mm sheet, 12mm/14mm margins →
-   182×273mm). */
-.kiid-print-root .kiid-page {
-  width: 210mm !important;
-  min-height: 297mm !important;
-  padding: 12mm 14mm !important;
-  box-sizing: border-box !important;
-  background: #ffffff;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(0, 0, 0, 0.08);
-  margin: 0 auto;
-}
-/* Visible boundary between page 1 and page 2. */
-.kiid-print-root .kiid-doc {
-  gap: 14mm !important;
-}
+/* ---------- KIID: native print pagination ---------- */
+/* On-screen A4 geometry lives in kiid-document.css (.kiid-page). */
 
 @page {
   size: A4;

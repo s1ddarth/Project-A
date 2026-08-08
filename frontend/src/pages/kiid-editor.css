@@ -24,10 +24,13 @@
 }
 
 .kiid-editor__form {
-  width: 45%;
+  width: 42%;
+  min-width: 18rem;
+  max-width: 32rem;
   overflow-y: auto;
   border-right: 1px solid hsl(var(--border));
   background: hsl(var(--muted) / 0.2);
+  flex-shrink: 0;
 }
 
 .kiid-editor__form-inner {
@@ -38,13 +41,33 @@
 }
 
 .kiid-editor__preview {
-  width: 55%;
+  flex: 1;
+  min-width: 0;
   height: 100%;
   overflow: auto;
+  background: rgb(226 232 240 / 0.6); /* slate-200/60 */
+}
+
+.kiid-editor__preview-inner {
+  padding: 1rem 1.5rem 2rem;
   display: flex;
   flex-direction: column;
   align-items: center;
-  background: rgb(226 232 240 / 0.6); /* slate-200/60 */
+  min-width: 0;
+}
+
+/* Shell height is set in JS to unscaledHeight * scale so scroll tracks visuals.
+   Transform on the child does not affect layout size. */
+.kiid-editor__preview-scale-shell {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.kiid-editor__preview-scale {
+  transform-origin: top center;
+  flex-shrink: 0;
 }
 
 .kiid-editor__print-root {
@@ -75,7 +98,22 @@
     overflow: visible;
     background: transparent;
     display: block;
-    align-items: stretch;
+  }
+
+  .kiid-editor__preview-inner {
+    padding: 0;
+    display: block;
+  }
+
+  .kiid-editor__preview-scale-shell {
+    height: auto !important;
+    overflow: visible;
+    display: block;
+  }
+
+  .kiid-editor__preview-scale {
+    transform: none !important;
+    width: auto !important;
   }
 
   .kiid-editor__print-root {
