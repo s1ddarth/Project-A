@@ -11,7 +11,12 @@ import {
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
+import {
+  DATE_FORMAT_OPTIONS, FREQUENCY_OPTIONS, downloadWorkbook,
+} from '@/lib/srriApi';
 import HeaderForm from '@/components/kiid/HeaderForm';
 import ValidationResults from '@/components/workflow/ValidationResults';
 import DocumentPreviewPanel from '@/components/workflow/DocumentPreviewPanel';
@@ -101,17 +106,39 @@ function StatusBanner({ ran, errors, warnings, awaitingFile }) {
 export default function ValidationStep({
   data,
   update,
-  navFileName,
+  navFile,
   onNavFile,
+  frequency,
+  onFrequencyChange,
+  dateFormat,
+  onDateFormatChange,
   headerFindings,
   navFindings,
   validating,
   onRunValidation,
   acknowledged,
   setAcknowledged,
-  demoState,
-  onDemoStateChange,
+  audit,
 }) {
+  const [workbookError, setWorkbookError] = React.useState('');
+  const [downloading, setDownloading] = React.useState(false);
+
+  const getWorkbook = async () => {
+    setWorkbookError('');
+    setDownloading(true);
+    try {
+      await downloadWorkbook({
+        file: navFile,
+        frequency,
+        dateFormat,
+        filename: `${(navFile?.name || 'nav').replace(/\.[^.]+$/, '')}-srri-calculation.xlsx`,
+      });
+    } catch (err) {
+      setWorkbookError(err.message);
+    } finally {
+      setDownloading(false);
+    }
+  };
   const totalErrors =
     (headerFindings || []).filter((f) => f.severity === 'error').length +
     (navFindings || []).filter((f) => f.severity === 'error').length;
@@ -134,34 +161,6 @@ export default function ValidationStep({
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(0,420px)]">
         {/* ---------------- LEFT — inputs ---------------- */}
         <div className="space-y-5 min-w-0">
-          {/* Demo state control — clearly labelled as a demo-only affordance. */}
-          <section className="rounded-xl border bg-amber-50/60 border-amber-200 p-4 shadow-sm">
-            <div className="flex items-center justify-between gap-4 flex-wrap">
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-semibold">Demo state</span>
-                  <span className="text-[10px] uppercase font-bold tracking-wide px-1.5 py-0.5 rounded bg-amber-200 text-amber-800">
-                    Demo only
-                  </span>
-                </div>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Switches the stubbed validation result. A real service will replace this.
-                </p>
-              </div>
-              <ToggleGroup
-                type="single"
-                value={demoState}
-                onValueChange={onDemoStateChange}
-                size="sm"
-                variant="outline"
-              >
-                <ToggleGroupItem value="clean" aria-label="Clean">Clean</ToggleGroupItem>
-                <ToggleGroupItem value="warnings" aria-label="Warnings only">Warnings only</ToggleGroupItem>
-                <ToggleGroupItem value="errors" aria-label="Errors">Errors</ToggleGroupItem>
-              </ToggleGroup>
-            </div>
-          </section>
-
           <section className="rounded-xl border bg-card p-5 shadow-sm">
             <h2 className="text-base font-semibold mb-1">Fund header</h2>
             <p className="text-xs text-muted-foreground mb-4">
@@ -187,24 +186,72 @@ export default function ValidationStep({
             <label className="flex flex-col items-center justify-center gap-2 border-2 border-dashed rounded-lg p-8 cursor-pointer hover:bg-muted/40 transition">
               <FileSpreadsheet className="h-8 w-8 text-muted-foreground" />
               <span className="text-sm font-medium">
-                {navFileName || 'Click to select an .xlsx NAV file'}
+                {navFile?.name || 'Click to select a NAV file'}
               </span>
-              <span className="text-[11px] text-muted-foreground">Excel (.xlsx) — stubbed for now</span>
+              <span className="text-[11px] text-muted-foreground">.xlsx, .xls, .csv or .txt</span>
               <input
                 type="file"
-                accept=".xlsx"
+                accept=".xlsx,.xls,.csv,.txt,.tsv"
                 className="hidden"
-                onChange={(e) => onNavFile(e.target.files?.[0]?.name || '')}
+                onChange={(e) => onNavFile(e.target.files?.[0] || null)}
               />
             </label>
-            <Button className="mt-4" onClick={onRunValidation} disabled={validating}>
-              {validating ? (
-                <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-              ) : (
-                <ShieldCheck className="h-4 w-4 mr-1" />
+
+            <div className="grid grid-cols-2 gap-3 mt-4">
+              <div className="space-y-1">
+                <Label className="text-xs font-medium text-muted-foreground">Frequency</Label>
+                <Select value={frequency} onValueChange={onFrequencyChange}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {FREQUENCY_OPTIONS.map((o) => (
+                      <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs font-medium text-muted-foreground">Date format</Label>
+                <Select value={dateFormat} onValueChange={onDateFormatChange}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {DATE_FORMAT_OPTIONS.map((o) => (
+                      <SelectItem key={o.value} value={o.value}>
+                        {o.label} — {o.hint}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            {/* The engine cannot tell 03/04 apart on its own. Getting this wrong
+                produces a wrong SRRI with no other symptom, so it is an explicit
+                choice rather than a silent default. */}
+            <p className="text-[11px] text-muted-foreground mt-1.5">
+              Date format must match the file. A US-formatted file read as DMY produces a wrong
+              SRRI with no other warning.
+            </p>
+
+            <div className="flex items-center gap-2 mt-4 flex-wrap">
+              <Button onClick={onRunValidation} disabled={validating}>
+                {validating ? (
+                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                ) : (
+                  <ShieldCheck className="h-4 w-4 mr-1" />
+                )}
+                {validating ? 'Validating…' : 'Run validation'}
+              </Button>
+              {navFile && (
+                <Button variant="outline" onClick={getWorkbook} disabled={downloading}>
+                  {downloading ? (
+                    <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+                  ) : (
+                    <Download className="h-4 w-4 mr-1.5" />
+                  )}
+                  Calculation workbook
+                </Button>
               )}
-              {validating ? 'Validating…' : 'Run validation'}
-            </Button>
+            </div>
+            {workbookError && <p className="text-[11px] text-red-600 mt-2">{workbookError}</p>}
             <p className="text-[11px] text-muted-foreground mt-2">
               Header checks run on the form; NAV file checks require a file to be uploaded.
             </p>
@@ -256,6 +303,40 @@ export default function ValidationStep({
           </section>
 
           <DocumentPreviewPanel data={data} />
+
+          {/* Rule 5 — a published figure must be re-derivable. Everything needed
+              to reproduce this SRRI comes back with it, so show it rather than
+              discard it. */}
+          {audit && (
+            <section className="rounded-xl border bg-card p-4 shadow-sm">
+              <h2 className="text-sm font-semibold mb-0.5">Calculation provenance</h2>
+              <p className="text-[11px] text-muted-foreground mb-2.5">
+                Stored with the document so any figure can be re-derived.
+              </p>
+              <dl className="text-[11px] space-y-1">
+                {[
+                  ['Engine', `${audit.engine_name} ${audit.engine_version}`],
+                  ['Basis', `${audit.frequency} — m=${audit.m}, T=${audit.window}, ${audit.annualisation}`],
+                  ['Date format used', audit.date_format_resolved.toUpperCase()],
+                  ['Box 3 buffer', `${audit.buffer_months} months`],
+                  [
+                    'Minimum window',
+                    `${audit.min_periods}${audit.min_periods_is_regulatory_default ? ' (regulatory default)' : ' (OVERRIDDEN)'}`,
+                  ],
+                  ['Input file', audit.input_filename || '—'],
+                ].map(([k, v]) => (
+                  <div key={k} className="flex justify-between gap-3">
+                    <dt className="text-muted-foreground shrink-0">{k}</dt>
+                    <dd className="text-right font-medium min-w-0 break-words">{v}</dd>
+                  </div>
+                ))}
+                <div className="pt-1">
+                  <dt className="text-muted-foreground">Input SHA-256</dt>
+                  <dd className="font-mono text-[10px] break-all">{audit.input_sha256}</dd>
+                </div>
+              </dl>
+            </section>
+          )}
         </div>
       </div>
     </div>
