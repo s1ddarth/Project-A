@@ -48,12 +48,12 @@ These come from the developer primer and are non-negotiable:
 
 ## 3. Architecture
 
-Three tiers:
+Three tiers in **one monorepo**:
 
-- **Frontend** — React + Vite. Auth, wizard, editor, live preview. Holds *no*
-  regulatory logic whatsoever. This is the repo you are working in.
-- **Python service (FastAPI)** — NAV parsing, validation, SRRI. Owns everything that
-  must be reproducible and auditable. **Does not exist yet.** Separate repo.
+- **`frontend/`** — React + Vite. Auth, wizard, editor, live preview. Holds *no*
+  regulatory logic whatsoever.
+- **`backend/`** — FastAPI. NAV parsing, validation, SRRI. Owns everything that must be
+  reproducible and auditable. **Not implemented yet** (placeholder README only).
 - **Storage** — NAV files and generated PDFs. Not needed for the demo; the demo path
   can accept an upload, validate, calculate, return, and discard.
 
@@ -62,10 +62,12 @@ in Python.**
 
 ### Hosting decisions
 
-- **Frontend** — Vercel or Netlify. It is a standard Vite build (`npm run build` →
-  static `dist/`), so connect the repo and it deploys on push. Free tier is sufficient.
-- **Python service** — Render, cheapest tier, **EU region (Frankfurt)**. The funds are
-  Irish and CBI-regulated; do not put data in a US region.
+- **Frontend** — Vercel or Netlify. Standard Vite build from `frontend/`
+  (`npm run build` → `frontend/dist/`). Set the Vercel **Root Directory** to
+  `frontend`. Free tier is sufficient. Do not commit `dist/`.
+- **Python service** — Render, cheapest tier, **EU region (Frankfurt)**. Point the
+  service at `backend/`. The funds are Irish and CBI-regulated; do not put data in a
+  US region. Do **not** host the backend on Vercel.
 - Keep the Python service as a plain Docker container with all config in environment
   variables, so moving to Cloud Run later (for batch runs) is a deployment change and
   not a rewrite.
@@ -79,16 +81,20 @@ becomes necessary only when server-side rendering returns for batch production.
 
 ## 4. Current state of this repo
 
-`github.com/s1ddarth/Project-A`, branch `main`, two commits: an initial load exported
-from Base44, then removal of the LaTeX references.
+`github.com/s1ddarth/Project-A`. Layout is a simple monorepo:
+
+```
+frontend/     Vite + React app (the working product today)
+backend/      FastAPI placeholder (README only; service not built yet)
+```
 
 **This repo is detached from Base44.** There is no `@base44/sdk` dependency, no
-`base44/` config directory, and no SDK imports anywhere in `src/`. That is why it runs
-on plain npm. It is a copy, *not* a two-way sync — the Base44 app
+`base44/` config directory, and no SDK imports anywhere in `frontend/src/`. That is why
+it runs on plain npm. It is a copy, *not* a two-way sync — the Base44 app
 (`6a7117d6f7d596d1fdf47ee4`) still exists and has diverged. **Treat this repo as the
 source of truth and do not attempt to sync back to Base44.**
 
-Notable structure:
+Notable frontend structure (`frontend/`):
 
 ```
 src/
@@ -133,8 +139,8 @@ The editor is not a route — `KiidWorkflow` renders `KiidEditor` directly at `s
 so it can take over the full screen with its own header.
 
 **There is no API wiring.** No `fetch`, no `axios`, no `VITE_` environment variables
-anywhere in `src/`. All validation findings and the SRRI value are stubbed inside
-components. The Python integration is entirely greenfield.
+anywhere in `frontend/src/`. All validation findings and the SRRI value are stubbed
+inside components. The Python integration is entirely greenfield.
 
 **Sample fund:** EPIC Financial Trends, EPIC Funds p.l.c., ISIN `IE00BDBB9Q16`
 (checksum verified valid), SRRI 4.
@@ -152,13 +158,13 @@ engine. `generatePdf.js`, `html2canvas` and `jspdf` were deleted.
 The known trade-off is that the user gets a print dialog rather than an instant
 download; this is accepted for now.
 
-Printing no longer calls `window.print()` on the page directly. `src/lib/printKiid.js`
-clones the preview into an off-screen iframe and prints that, because nested flex +
-`overflow:auto` shells caused Firefox and WebKit to clip or drop sections. It carries a
-separate Safari CSS branch. **This is the most fragile file in the repo** — changes to
-it or to the document CSS must be verified in Chrome, Firefox and Safari. The one-click download returns when the Python
-service renders the same HTML server-side with Playwright, which is also what satisfies
-rule 1 (one render path).
+Printing no longer calls `window.print()` on the page directly.
+`frontend/src/lib/printKiid.js` clones the preview into an off-screen iframe and prints
+that, because nested flex + `overflow:auto` shells caused Firefox and WebKit to clip or
+drop sections. It carries a separate Safari CSS branch. **This is the most fragile file
+in the repo** — changes to it or to the document CSS must be verified in Chrome, Firefox
+and Safari. The one-click download returns when the Python service renders the same HTML
+server-side with Playwright, which is also what satisfies rule 1 (one render path).
 
 **The LaTeX path was deleted.** `renderTex.js`, `EPIC_KIID.tex.hbs` and `handlebars` are
 gone and are not coming back. Do not reintroduce a second template system.
@@ -252,10 +258,11 @@ date so a finding can be linked to the offending row. Both `srri_raw` and
 `srri_disclosed` are returned so the editor can show when the Box 3 buffer is holding a
 migration back.
 
-**Recommended next step:** build a stub FastAPI service returning hardcoded responses in
-this shape and deploy it, *before* the engine refactor lands. It proves deployment,
-CORS, auth and frontend wiring while the engine is still being written, and swapping the
-stub for the real engine is then a one-line change.
+**Recommended next step:** scaffold a stub FastAPI service under `backend/` returning
+hardcoded responses in this shape and deploy it to Render (EU), *before* the engine
+refactor lands. It proves deployment, CORS, auth and frontend wiring while the engine
+is still being written, and swapping the stub for the real engine is then a one-line
+change.
 
 ## 8. Validation design
 
@@ -329,9 +336,10 @@ Attach these alongside this file:
 
 ## 13. Immediate priorities
 
-1. Node upgrade to 22+ LTS, `npm install`, `npm run dev` — get the app running locally.
-2. Remove the dead dependencies (§11).
-3. Verify and rewrite `CLAUDE.md`.
-4. Agree the API contract (§7), then build and deploy the stub service.
+1. From `frontend/`: Node 22+ LTS, `npm install`, `npm run dev` — get the app running.
+2. Confirm Vercel Root Directory is `frontend`.
+3. Remove the dead dependencies (§11).
+4. Agree the API contract (§7), then scaffold the stub FastAPI service under `backend/`
+   and deploy it to Render (EU).
 5. Land the engine refactor (§6) behind golden tests.
 6. Swap the stub for the real engine.

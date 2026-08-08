@@ -2,9 +2,11 @@
 
 ## Project Context
 
-This is the frontend of a regulatory document SaaS that generates UCITS KIID fund
-disclosure documents. It is a standalone Vite + React app — no Base44 SDK, no backend
-dependency, plain npm.
+This is a monorepo for a regulatory document SaaS that generates UCITS KIID fund
+disclosure documents.
+
+- **`frontend/`** — Vite + React app. No Base44 SDK, no backend dependency yet, plain npm.
+- **`backend/`** — FastAPI service (NAV validation, SRRI). **Not implemented yet.**
 
 **Read `PROJECT_CONTEXT.md` first.** It is the handover document and the source of
 truth for architecture and decisions. This file is the short operational version.
@@ -16,9 +18,9 @@ preserve existing conventions.
 
 These are regulatory, not stylistic. See `PROJECT_CONTEXT.md` §2.
 
-1. **No regulatory maths in this repo. Ever.** SRRI, volatility, risk classification
-   and the CESR Box 3 buffer live in a Python service. Do not compute them in
-   JavaScript, do not port them "just for the demo", do not inline a lookup table of
+1. **No regulatory maths in the frontend. Ever.** SRRI, volatility, risk classification
+   and the CESR Box 3 buffer live in the Python service (`backend/`). Do not compute them
+   in JavaScript, do not port them "just for the demo", do not inline a lookup table of
    the SRRI bands. This is the rule that gets broken most often.
 2. **One render path.** The on-screen preview and the exported PDF come from the same
    markup through the same renderer. Any change that lets them drift is a bug.
@@ -44,7 +46,7 @@ Deliberately deleted. Re-adding any of these undoes a decision, it does not fix 
 
 ## Architecture boundary
 
-| Lives here (React) | Lives in Python (separate repo, **does not exist yet**) |
+| Lives in `frontend/` (React) | Lives in `backend/` (Python, **empty for now**) |
 |---|---|
 | Wizard, editor, live preview, form state | NAV parsing, frequency detection |
 | Rendering and page-fit | Validation findings and severities |
@@ -57,14 +59,17 @@ Python.**
 
 - **No auth.** `App.jsx` routes `/` straight to `KiidWorkflow`. Deliberate, for the demo.
 - **No API wiring.** No `fetch`, no `axios`, no `VITE_` environment variables anywhere
-  in `src/`.
-- **Validation findings and the SRRI are stubbed** in `src/pages/KiidWorkflow.jsx`
-  (see `HEADER_FINDINGS_BY_DEMO`, `NAV_FINDINGS_BY_DEMO`, `STUB_SRRI`). The
-  `{ id, severity, code, message }` shape is the de facto contract with the future
-  service — keep it stable, and prefer extending it over reshaping it.
+  in `frontend/src/`.
+- **Validation findings and the SRRI are stubbed** in
+  `frontend/src/pages/KiidWorkflow.jsx` (see `HEADER_FINDINGS_BY_DEMO`,
+  `NAV_FINDINGS_BY_DEMO`, `STUB_SRRI`). The `{ id, severity, code, message }` shape is
+  the de facto contract with the future service — keep it stable, and prefer extending
+  it over reshaping it.
 - **Sample fund:** EPIC Financial Trends, ISIN `IE00BDBB9Q16`, SRRI 4.
 
 ## Key files
+
+Paths are under `frontend/` unless noted.
 
 - `src/pages/KiidWorkflow.jsx` — the wizard shell. Four steps: Product → Production →
   Validation → Editor. Owns document state and the stubbed findings.
@@ -84,11 +89,14 @@ Python.**
 ## Working notes
 
 - **Node 22+ required** (Vite 6). Node 18 and 21 will not do.
-- `npm run dev` for local development.
+- Frontend: `cd frontend && npm run dev`.
 - Document state persists in `localStorage` under `kiid-editor-state-v1`. Clear it if
   the editor loads stale data after a schema change.
-- Before finishing code changes run `npm run lint`, `npm run typecheck` and
-  `npm run build`.
+- Before finishing frontend code changes, from `frontend/` run `npm run lint`,
+  `npm run typecheck` and `npm run build`.
+- `dist/` is a Vite build artifact (under `frontend/` after build). Do not commit it.
+- Vercel deploys the frontend only — set Root Directory to `frontend`. The backend
+  deploys separately to Render (EU / Frankfurt).
 - `react-quill@2.0.0` (in `RichTextBullets.jsx`) is unmaintained, has React 18
   `findDOMNode` issues and carries an open XSS advisory in its bundled `quill`. A swap
   to Tiptap is planned. Do not paper over it with `npm audit fix --force` — that
