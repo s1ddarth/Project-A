@@ -151,13 +151,8 @@
     break-before: page;
     page-break-before: always;
   }
-  /* Soft fragmentation: avoid only small units. Blanket avoid on tall
-     .kiid-redbox sections can make Firefox omit them entirely.
-     Safari print uses iframe + inline-block keep-together in printKiid.js. */
-  .kiid-print-root .kiid-redbox {
-    break-inside: auto;
-    page-break-inside: auto;
-  }
+  /* Soft fragmentation: avoid only small units.
+     Safari print uses iframe + table-cell splits in printKiid.js. */
   .kiid-print-root .kiid-header,
   .kiid-print-root .kiid-charges,
   .kiid-print-root .kiid-regulatory,
@@ -168,7 +163,7 @@
     page-break-inside: avoid;
   }
   /* Suppress trailing margins at break points to avoid white space. */
-  .kiid-print-root .kiid-page > .kiid-redbox:last-child {
+  .kiid-print-root .kiid-page > :last-child {
     margin-bottom: 0 !important;
   }
 

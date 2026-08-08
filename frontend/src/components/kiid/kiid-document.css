@@ -2,8 +2,6 @@
 
 .kiid-doc {
   --kiid-navy: #1e2a56;
-  --kiid-red: #c81e1e;
-  --kiid-blue: #005ab4;
   --kiid-grey: #e1e1e1;
   --kiid-muted: #9aa0a6;
 
@@ -27,18 +25,12 @@
   box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
 }
 
-.kiid-redbox {
-  background: #fff;
-  border: 1px solid var(--kiid-red);
-  padding: 8px 7px 7px;
+.kiid-section {
   margin-bottom: 10px;
 }
 
-.kiid-bluebox {
-  background: #fff;
-  border: 1px solid var(--kiid-blue);
-  padding: 7px 6px;
-  height: 100%;
+.kiid-page > :last-child {
+  margin-bottom: 0;
 }
 
 /* Header */
@@ -112,6 +104,7 @@
 .kiid-split {
   display: flex;
   gap: 10px;
+  margin-bottom: 10px;
 }
 
 .kiid-split__left {
