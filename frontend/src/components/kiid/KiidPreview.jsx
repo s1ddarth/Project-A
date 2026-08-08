@@ -102,34 +102,36 @@ export default function KiidPreview({ data }) {
           </p>
         </div>
 
-        <div className="kiid-split">
-          <div className="kiid-split__left">
-            <div className="kiid-section-title">
-              RISK AND REWARD PROFILE
-            </div>
-            <div className="kiid-risk-labels">
-              <span>Lower risk</span>
-              <span>Higher risk</span>
-            </div>
-            <div className="kiid-risk-labels">
-              <span>Potentially lower reward</span>
-              <span>Potentially higher reward</span>
-            </div>
-            <SrriScale srriCategory={d.srriCategory} />
-            <p className="kiid-p kiid-p--sm kiid-p--tight">
-              The Fund is in category {d.srriCategory || '\u00A0'} as assets it holds have
-              historically been subject to higher levels of price fluctuation. The category shown
-              is not guaranteed and may change over time. It is based on historical data and may
-              not be a reliable indication of future circumstances. The lowest category does not
-              mean a risk free investment.
-            </p>
-            <p className="kiid-p kiid-p--sm kiid-p--spaced">
-              The Fund is exposed to additional risks not captured by the risk indicator
-              including, without limitation:
-            </p>
+        <div className="kiid-section">
+          <div className="kiid-section-title">
+            RISK AND REWARD PROFILE
           </div>
-          <div className="kiid-split__right">
-            <Bullets items={d.riskBullets} />
+          <div className="kiid-split">
+            <div className="kiid-split__left">
+              <div className="kiid-risk-labels">
+                <span>Lower risk</span>
+                <span>Higher risk</span>
+              </div>
+              <div className="kiid-risk-labels">
+                <span>Potentially lower reward</span>
+                <span>Potentially higher reward</span>
+              </div>
+              <SrriScale srriCategory={d.srriCategory} />
+              <p className="kiid-p kiid-p--sm kiid-p--tight">
+                The Fund is in category {d.srriCategory || '\u00A0'} as assets it holds have
+                historically been subject to higher levels of price fluctuation. The category shown
+                is not guaranteed and may change over time. It is based on historical data and may
+                not be a reliable indication of future circumstances. The lowest category does not
+                mean a risk free investment.
+              </p>
+              <p className="kiid-p kiid-p--sm kiid-p--spaced">
+                The Fund is exposed to additional risks not captured by the risk indicator
+                including, without limitation:
+              </p>
+            </div>
+            <div className="kiid-split__right">
+              <Bullets items={d.riskBullets} />
+            </div>
           </div>
         </div>
       </Page>
