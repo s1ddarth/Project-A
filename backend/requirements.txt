@@ -1,0 +1,13 @@
+# SRRI engine runtime dependencies.
+#
+# Pinned with lower bounds that reflect what the engine actually requires:
+#   pydantic  >=2  — the engine uses ConfigDict and field_validator (v2 API);
+#                    it will not import under pydantic 1.x.
+#   pandas    >=2  — the engine resamples with the "ME" alias, which replaced
+#                    the deprecated "M" in pandas 2.2.
+#
+# Python 3.11+ (see .python-version).
+numpy>=1.26
+openpyxl>=3.1
+pandas>=2.2
+pydantic>=2.6
