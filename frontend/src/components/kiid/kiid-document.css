@@ -225,6 +225,7 @@
 .kiid-regulatory {
   background: var(--kiid-grey);
   padding: 6px 8px;
+  color: var(--epic-navy);
 }
 
 .kiid-regulatory p {
