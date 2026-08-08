@@ -7,9 +7,13 @@ import ProductionMode from '@/components/workflow/ProductionMode';
 import ValidationStep from '@/components/workflow/ValidationStep';
 import KiidEditor from '@/pages/KiidEditor';
 import { defaultData, sampleData } from '@/lib/kiidData';
+import { cn } from '@/lib/utils';
 
 const STEPS = ['Product', 'Production', 'Validation', 'Editor'];
-const STORAGE_KEY = 'kiid-editor-state-v1';
+// v2: srriCategory/srriLabel/performanceYears became engine-computed and start
+// empty, and accDis was added. Bumping the key avoids resurrecting a v1 draft
+// that would show a typed-looking SRRI the engine never produced.
+const STORAGE_KEY = 'kiid-editor-state-v2';
 
 function loadState() {
   try {
@@ -50,7 +54,19 @@ const NAV_FINDINGS_BY_DEMO = {
   ],
 };
 
+// Stubbed engine response. Everything below is computed by the Python service
+// from the uploaded NAV file — the SRRI category, its matching risk wording and
+// the past-performance figures. None of it may ever be typed by a user.
 const STUB_SRRI = '4';
+const STUB_SRRI_LABEL = 'Medium Risk';
+const STUB_PERFORMANCE_YEARS = [
+  { year: 2019, value: 8.2 },
+  { year: 2020, value: 5.4 },
+  { year: 2021, value: 14.1 },
+  { year: 2022, value: -6.8 },
+  { year: 2023, value: 11.5 },
+  { year: 2024, value: 7.3 },
+];
 
 export default function KiidWorkflow() {
   const [step, setStep] = useState(0);
@@ -83,11 +99,24 @@ export default function KiidWorkflow() {
     setNavFindings(null);
     setAcknowledged(false);
     setTimeout(() => {
-      setHeaderFindings(HEADER_FINDINGS_BY_DEMO[demoState]);
-      setNavFindings(navFileName ? NAV_FINDINGS_BY_DEMO[demoState] : null);
-      if (navFileName) {
-        setData((prev) => ({ ...prev, srriCategory: STUB_SRRI }));
-      }
+      const header = HEADER_FINDINGS_BY_DEMO[demoState];
+      const nav = navFileName ? NAV_FINDINGS_BY_DEMO[demoState] : null;
+      setHeaderFindings(header);
+      setNavFindings(nav);
+      // The engine only returns figures when the file was actually accepted, so
+      // a blocking error must leave the computed fields unresolved rather than
+      // populating the document with numbers nothing stands behind.
+      const blocked = [...header, ...(nav || [])].some((f) => f.severity === 'error');
+      setData((prev) =>
+        navFileName && !blocked
+          ? {
+              ...prev,
+              srriCategory: STUB_SRRI,
+              srriLabel: STUB_SRRI_LABEL,
+              performanceYears: STUB_PERFORMANCE_YEARS,
+            }
+          : { ...prev, srriCategory: '', srriLabel: '', performanceYears: [] }
+      );
       setValidating(false);
     }, 1000);
   };
@@ -132,7 +161,9 @@ export default function KiidWorkflow() {
       </div>
 
       <div className="flex-1 overflow-y-auto">
-        <div className="max-w-3xl mx-auto p-6">
+        {/* The validation step runs a two-column layout, so it needs the full
+            width; the picker steps stay narrow and centred. */}
+        <div className={cn('mx-auto p-6', step === 2 ? 'max-w-[1500px]' : 'max-w-3xl')}>
           {step === 0 && <ProductPicker value={product} onChange={setProduct} />}
           {step === 1 && <ProductionMode value={mode} onChange={setMode} />}
           {step === 2 && (

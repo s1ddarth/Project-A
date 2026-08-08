@@ -17,10 +17,16 @@ export default function PerformanceChart({ years }) {
     .filter((y) => y && (y.year || y.year === 0))
     .map((y) => ({ name: String(y.year), value: Number(y.value) || 0 }));
 
+  // Figures are engine-computed from the NAV file. Render the unresolved state
+  // explicitly rather than an empty chart — an unpopulated document must be
+  // visibly unpopulated, not merely blank (rule 3).
   if (data.length === 0) {
     return (
-      <div className="flex items-center justify-center h-[150px] text-xs text-muted-foreground italic border border-dashed rounded">
-        No performance data
+      <div className="flex flex-col items-center justify-center gap-0.5 h-[150px] text-center border border-dashed border-amber-400 bg-amber-50/50 rounded">
+        <span className="text-xs font-medium text-amber-800">Not yet calculated</span>
+        <span className="text-[10px] text-amber-700">
+          Upload a NAV file and run validation
+        </span>
       </div>
     );
   }
