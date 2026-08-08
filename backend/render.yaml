@@ -1,0 +1,25 @@
+# Render blueprint for the SRRI service.
+#
+# Region is Frankfurt deliberately: the funds are Irish and CBI-regulated, so NAV
+# data must not land in a US region (PROJECT_CONTEXT.md section 3).
+#
+# The frontend deploys separately to Vercel. It cannot share this service's
+# platform — see the Deployment section of the root README for why.
+services:
+  - type: web
+    name: srri-service
+    runtime: docker
+    repo: https://github.com/s1ddarth/Project-A
+    region: frankfurt
+    plan: starter
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    autoDeploy: false
+    envVars:
+      # Comma-separated. Must include the deployed frontend origin, or the
+      # browser will block every call with a CORS error.
+      - key: CORS_ORIGINS
+        sync: false
+      - key: MAX_UPLOAD_BYTES
+        value: "20971520"
