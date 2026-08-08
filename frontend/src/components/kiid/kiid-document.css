@@ -73,6 +73,7 @@
 .kiid-fund-name {
   font-size: 16px;
   font-weight: 700;
+  font-family: 'Times New Roman', Arial, serif;
 }
 
 .kiid-fund-line {
@@ -94,6 +95,7 @@
 .kiid-section-title {
   font-weight: 700;
   font-size: 14px;
+  font-family: 'Times New Roman', Arial, serif;
   margin-bottom: 4px;
 }
 
