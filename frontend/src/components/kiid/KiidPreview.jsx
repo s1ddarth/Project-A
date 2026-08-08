@@ -49,6 +49,10 @@ function Page({ children }) {
   return <div className="kiid-page">{children}</div>;
 }
 
+function Divider() {
+  return <hr className="kiid-divider" />;
+}
+
 export default function KiidPreview({ data }) {
   const d = data || {};
   const additional = filterBullets(d.additionalInfoBullets);
@@ -57,6 +61,7 @@ export default function KiidPreview({ data }) {
     <div className="kiid-doc">
       {/* ---------- PAGE 1 ---------- */}
       <Page>
+        {/* TODO: This needs to be styled as a logo */}
         <div className="kiid-header">
           <div className="kiid-brand">
             <span className="kiid-brand-name">EPIC</span>
@@ -87,6 +92,7 @@ export default function KiidPreview({ data }) {
 
         <div className="kiid-section">
           <div className="kiid-section-title">OBJECTIVES AND INVESTMENT POLICY</div>
+          <Divider />
           <Bullets items={d.objectivesBullets} columns={2} />
           {d.showRecommendation && (
             <p className="kiid-p kiid-p--italic">
@@ -107,6 +113,7 @@ export default function KiidPreview({ data }) {
           <div className="kiid-section-title">
             RISK AND REWARD PROFILE
           </div>
+          <Divider />
           <div className="kiid-split">
             <div className="kiid-split__left">
               <div className="kiid-risk-labels">
@@ -145,6 +152,7 @@ export default function KiidPreview({ data }) {
           <div className="kiid-section-title">
             CHARGES FOR THIS FUND
           </div>
+          <Divider />
           <div className="kiid-split">
             <div className="kiid-split__left">
               <ChargeTable
@@ -197,6 +205,7 @@ export default function KiidPreview({ data }) {
 					<div className="kiid-section-title">
 						PAST PERFORMANCE
 					</div>
+          <Divider />
 					<div className="kiid-split">
 						<div className="kiid-split__left--wide">
 							<PerformanceChart years={d.performanceYears} />
@@ -210,6 +219,7 @@ export default function KiidPreview({ data }) {
         {/* Section: Practical information */}
         <div className="kiid-section">
           <div className="kiid-section-title ">PRACTICAL INFORMATION</div>
+          <Divider />
           <Bullets items={d.practicalBullets} columns={2} size="10" />
         </div>
 

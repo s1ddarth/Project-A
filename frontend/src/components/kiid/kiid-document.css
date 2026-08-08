@@ -95,6 +95,12 @@
   color: var(--epic-navy);
 }
 
+.kiid-divider {
+  border: 0;
+  border-top: 1px solid #BFBFBF;
+  margin: 4px 0 8px;
+}
+
 /* Two-column layouts */
 .kiid-split {
   display: flex;
