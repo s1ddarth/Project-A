@@ -8,6 +8,7 @@ import ValidationStep from '@/components/workflow/ValidationStep';
 import KiidEditor from '@/pages/KiidEditor';
 import { defaultData, sampleData } from '@/lib/kiidData';
 import { cn } from '@/lib/utils';
+import { validateAndCalculate } from '@/lib/srriApi';
 
 const STEPS = ['Product', 'Production', 'Validation', 'Editor'];
 // v2: srriCategory/srriLabel/performanceYears became engine-computed and start
@@ -25,100 +26,98 @@ function loadState() {
   return { ...defaultData, ...sampleData };
 }
 
-// ---- Stubbed findings, split into two passes. A real Python service will ----
-// ---- supply these later; the shape (id, severity, code, message) is the  ----
-// ---- contract. The demo state switches between Clean / Warnings / Errors. ----
-
-// Pass 1 — header checks: validate the fund identification form fields. Runs
-// on the form, independent of the uploaded file.
-const HEADER_FINDINGS_BY_DEMO = {
-  clean: [],
-  warnings: [],
-  errors: [
-    { id: 'h1', severity: 'error', code: 'ISIN_CHECKSUM', message: 'ISIN check digit does not match the expected value for IE00BDBB9Q16.' },
-    { id: 'h2', severity: 'error', code: 'CURRENCY_MISMATCH', message: 'Share class currency (USD) differs from sub-fund base currency (EUR) — a mismatch means the wrong share class would be generated.' },
-  ],
-};
-
-// Pass 2 — NAV file checks: validate the uploaded spreadsheet itself. Runs on
-// the file, so only produced when a NAV file has been uploaded.
-const NAV_FINDINGS_BY_DEMO = {
-  clean: [],
-  warnings: [
-    { id: 'n1', severity: 'warning', code: 'PARTIAL_YEAR', message: 'Performance figure for 2024 is a partial year — ensure the past-performance disclaimer is present.' },
-    { id: 'n2', severity: 'warning', code: 'STALE_PRICE', message: 'NAV price for 2024-11-29 is over 30 days old; confirm the latest valuation has been uploaded.' },
-  ],
-  errors: [
-    { id: 'n3', severity: 'error', code: 'NAV_HISTORY_SHORT', message: 'NAV history contains only 4 consecutive years; a minimum of 5 is required to compute SRRI.' },
-    { id: 'n4', severity: 'warning', code: 'PARTIAL_YEAR', message: 'Performance figure for 2024 is a partial year — ensure the past-performance disclaimer is present.' },
-  ],
-};
-
-// Stubbed engine response. Everything below is computed by the Python service
-// from the uploaded NAV file — the SRRI category, its matching risk wording and
-// the past-performance figures. None of it may ever be typed by a user.
-const STUB_SRRI = '4';
-const STUB_SRRI_LABEL = 'Medium Risk';
-const STUB_PERFORMANCE_YEARS = [
-  { year: 2019, value: 8.2 },
-  { year: 2020, value: 5.4 },
-  { year: 2021, value: 14.1 },
-  { year: 2022, value: -6.8 },
-  { year: 2023, value: 11.5 },
-  { year: 2024, value: 7.3 },
+// Fields sent to the service for pass 1 (header checks). Only master data —
+// the narrative blocks are irrelevant to validation.
+const HEADER_FIELDS = [
+  'subFundName', 'companyName', 'shareClassFullName', 'isin',
+  'subFundBaseCurrency', 'shareClassBaseCurrency', 'hedged', 'accDis', 'scLetter',
 ];
+
+function headerPayload(data) {
+  return Object.fromEntries(HEADER_FIELDS.map((k) => [k, data[k]]));
+}
+
+/** Present a client-side failure in the same shape the service uses. */
+function errorAsFinding(err) {
+  return [{
+    id: 'client-0',
+    pass: 'header',
+    severity: 'error',
+    code: err.code || 'SERVICE_ERROR',
+    message: err.message,
+    remediation: err.remediation,
+    detail: {},
+  }];
+}
 
 export default function KiidWorkflow() {
   const [step, setStep] = useState(0);
   const [data, setData] = useState(loadState);
   const [product, setProduct] = useState('ucits_kiid');
   const [mode, setMode] = useState('single');
-  const [demoState, setDemoState] = useState('warnings'); // clean | warnings | errors
   const [headerFindings, setHeaderFindings] = useState(null);
   const [navFindings, setNavFindings] = useState(null);
   const [validating, setValidating] = useState(false);
   const [acknowledged, setAcknowledged] = useState(false);
-  const [navFileName, setNavFileName] = useState('');
+  const [navFile, setNavFile] = useState(null);
+  const [frequency, setFrequency] = useState('auto');
+  const [dateFormat, setDateFormat] = useState('dmy');
+  const [audit, setAudit] = useState(null);
 
   const update = useCallback((field, value) => {
     setData((prev) => ({ ...prev, [field]: value }));
   }, []);
 
-  const changeDemoState = useCallback((v) => {
-    if (!v) return;
-    setDemoState(v);
-    // Clear previous results so the user re-runs with the new state.
+  // Changing an input invalidates the previous result — a stale SRRI next to
+  // edited inputs is exactly the drift rule 5 exists to prevent.
+  const invalidate = useCallback(() => {
     setHeaderFindings(null);
     setNavFindings(null);
     setAcknowledged(false);
+    setAudit(null);
+    setData((prev) => ({ ...prev, srriCategory: '', srriLabel: '' }));
   }, []);
 
-  const runValidation = () => {
+  const onNavFile = useCallback((file) => {
+    setNavFile(file);
+    invalidate();
+  }, [invalidate]);
+
+  const runValidation = async () => {
     setValidating(true);
     setHeaderFindings(null);
     setNavFindings(null);
     setAcknowledged(false);
-    setTimeout(() => {
-      const header = HEADER_FINDINGS_BY_DEMO[demoState];
-      const nav = navFileName ? NAV_FINDINGS_BY_DEMO[demoState] : null;
-      setHeaderFindings(header);
-      setNavFindings(nav);
-      // The engine only returns figures when the file was actually accepted, so
-      // a blocking error must leave the computed fields unresolved rather than
-      // populating the document with numbers nothing stands behind.
-      const blocked = [...header, ...(nav || [])].some((f) => f.severity === 'error');
-      setData((prev) =>
-        navFileName && !blocked
-          ? {
-              ...prev,
-              srriCategory: STUB_SRRI,
-              srriLabel: STUB_SRRI_LABEL,
-              performanceYears: STUB_PERFORMANCE_YEARS,
-            }
-          : { ...prev, srriCategory: '', srriLabel: '', performanceYears: [] }
-      );
+    setAudit(null);
+
+    // Everything below comes back from the engine. Nothing here derives a risk
+    // number, a risk label or a finding — that is the service's job (rule 4).
+    try {
+      const res = await validateAndCalculate({
+        header: headerPayload(data),
+        file: navFile,
+        frequency,
+        dateFormat,
+      });
+      setHeaderFindings(res.header_findings || []);
+      setNavFindings(navFile ? res.nav_findings || [] : null);
+      setAudit(res.audit || null);
+      setData((prev) => ({
+        ...prev,
+        srriCategory: res.srri?.srri_disclosed != null ? String(res.srri.srri_disclosed) : '',
+        srriLabel: res.srri?.risk_description || '',
+        // TODO(#31): past performance is not computed by this engine — it
+        // returns SRRI only. Left unresolved rather than faked; revisit when
+        // the engine gains a performance calculation.
+        performanceYears: [],
+      }));
+    } catch (err) {
+      setHeaderFindings(errorAsFinding(err));
+      setNavFindings(null);
+      setData((prev) => ({ ...prev, srriCategory: '', srriLabel: '', performanceYears: [] }));
+    } finally {
       setValidating(false);
-    }, 1000);
+    }
   };
 
   const reset = () => setData({ ...defaultData, ...sampleData });
@@ -170,16 +169,19 @@ export default function KiidWorkflow() {
             <ValidationStep
               data={data}
               update={update}
-              navFileName={navFileName}
-              onNavFile={setNavFileName}
+              navFile={navFile}
+              onNavFile={onNavFile}
+              frequency={frequency}
+              onFrequencyChange={setFrequency}
+              dateFormat={dateFormat}
+              onDateFormatChange={setDateFormat}
               headerFindings={headerFindings}
               navFindings={navFindings}
               validating={validating}
               onRunValidation={runValidation}
               acknowledged={acknowledged}
               setAcknowledged={setAcknowledged}
-              demoState={demoState}
-              onDemoStateChange={changeDemoState}
+              audit={audit}
             />
           )}
         </div>
