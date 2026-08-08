@@ -56,12 +56,6 @@ html, body {
   page-break-before: always;
 }
 
-/* Soft fragmentation for Chromium/Firefox (Safari overrides below). */
-.kiid-print-root .kiid-redbox {
-  break-inside: auto;
-  page-break-inside: auto;
-}
-
 .kiid-print-root .kiid-header,
 .kiid-print-root .kiid-charges,
 .kiid-print-root .kiid-regulatory,
@@ -72,7 +66,7 @@ html, body {
   page-break-inside: avoid;
 }
 
-.kiid-print-root .kiid-page > .kiid-redbox:last-child {
+.kiid-print-root .kiid-page > :last-child {
   margin-bottom: 0 !important;
 }
 
@@ -87,24 +81,10 @@ html, body {
 `;
 
 /**
- * WebKit largely ignores break-inside:avoid on bordered blocks and will slice
- * red/blue boxes mid-chart. inline-block creates an atomic fragment that
- * Safari will push to the next page instead of splitting.
+ * WebKit can slice flex splits and charts mid-content. table-cell columns
+ * plus break-inside:avoid on the chart keep sections intact in Safari.
  */
 const SAFARI_PRINT_CSS = `
-.kiid-print-root .kiid-redbox,
-.kiid-print-root .kiid-bluebox {
-  break-inside: avoid !important;
-  page-break-inside: avoid !important;
-  -webkit-column-break-inside: avoid !important;
-  display: inline-block !important;
-  width: 100% !important;
-  max-width: 100% !important;
-  vertical-align: top;
-  box-sizing: border-box !important;
-  overflow: hidden !important;
-}
-
 .kiid-print-root .kiid-split {
   display: table !important;
   width: 100% !important;
