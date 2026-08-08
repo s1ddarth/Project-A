@@ -7,6 +7,19 @@ export const sectionHelperText = {
   additional: "Note any specific terms regarding switching between share classes or other funds. Include references to related documents or regulatory compliance notes. Highlight any risks or factors not covered in earlier sections. Mention any significant fund events such as mergers or structural changes. If the fund includes ESG or sustainability considerations, please describe briefly. Add any other investor-relevant information or disclaimers.",
 };
 
+/**
+ * Standard line printed under the past-performance chart.
+ *
+ * Kept as a single function so the wording can be changed in one place — it is
+ * expected to change. The currency is user-entered master data, not an
+ * engine-computed figure, so it is interpolated rather than placeholder-filled.
+ */
+export const pastPerformanceCurrencyLine = (currency) =>
+  `Past performance has been calculated in ${currency || '—'}.`;
+
+/** Permitted values for the Acc/Dis share-class field (Field Schema Spec §2). */
+export const ACC_DIS_OPTIONS = ['Accumulating', 'Distributing'];
+
 export const defaultData = {
   subFundName: '',
   companyName: '',
@@ -15,11 +28,16 @@ export const defaultData = {
   subFundBaseCurrency: 'USD',
   shareClassBaseCurrency: 'USD',
   hedged: false,
+  accDis: '',
   scLetter: '',
   objectivesBullets: [],
   showRecommendation: true,
   minInvestmentYears: 3,
-  srriCategory: '4',
+  // Engine-computed. Empty until validation runs — never type a risk number.
+  srriCategory: '',
+  // Derived by the engine alongside the category (##SRRI_LABEL##), never mapped
+  // in the frontend — the wording must match the number the engine returned.
+  srriLabel: '',
   riskBullets: [],
   entryCost: 0,
   exitCost: 0,
@@ -47,6 +65,7 @@ export const sampleData = {
   subFundBaseCurrency: 'USD',
   shareClassBaseCurrency: 'USD',
   hedged: false,
+  accDis: 'Accumulating',
   scLetter: 'X',
   objectivesBullets: [
     "EPIC Financial Trends is a sub-fund of EPIC Funds p.l.c., an open-ended investment company with variable capital incorporated in Ireland and authorised by the Central Bank of Ireland as a UCITS.",
@@ -57,7 +76,9 @@ export const sampleData = {
   ],
   showRecommendation: true,
   minInvestmentYears: 3,
-  srriCategory: '4',
+  // Engine-computed — see defaultData. Filled by validation, not by the user.
+  srriCategory: '',
+  srriLabel: '',
   riskBullets: [
     "Currency risk: the Fund's base currency is USD and investments may be denominated in other currencies, exposing investors to exchange-rate movements.",
     "Liquidity risk: some securities may become difficult to sell in adverse market conditions.",
@@ -76,14 +97,9 @@ export const sampleData = {
     "Ongoing charges are taken from the share class over a year and include management fees and administrative costs.",
     "Transaction costs are incurred when the Fund buys and sells investments.",
   ],
-  performanceYears: [
-    { year: 2019, value: 8.2 },
-    { year: 2020, value: 5.4 },
-    { year: 2021, value: 14.1 },
-    { year: 2022, value: -6.8 },
-    { year: 2023, value: 11.5 },
-    { year: 2024, value: 7.3 },
-  ],
+  // Engine-computed from the NAV file. Empty until validation runs; the demo
+  // figures now live in KiidWorkflow as the stubbed engine response.
+  performanceYears: [],
   performanceBullets: [
     "Performance figures are shown net of ongoing charges and transaction costs.",
     "Past performance is not a reliable indicator of future results.",

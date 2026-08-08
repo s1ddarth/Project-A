@@ -1,6 +1,7 @@
 import React from 'react';
 import SrriScale from './SrriScale';
-import PerformanceChart from './PerformanceChart';
+import KiidHeaderBlock from './KiidHeaderBlock';
+import KiidPastPerformanceBlock from './KiidPastPerformanceBlock';
 import './kiid-document.css';
 
 function filterBullets(arr) {
@@ -61,26 +62,8 @@ export default function KiidPreview({ data }) {
     <div className="kiid-doc">
       {/* ---------- PAGE 1 ---------- */}
       <Page>
-        {/* TODO: This needs to be styled as a logo */}
-        <div className="kiid-header">
-          <div className="kiid-brand">
-            <span className="kiid-brand-name">EPIC</span>
-            <div className="kiid-brand-sub">
-              Investment<br />Partners
-            </div>
-          </div>
-          <div className="kiid-fund-meta">
-            <div className="kiid-fund-name">
-              {d.subFundName || '\u00A0'} (the "Fund")
-            </div>
-            <div className="kiid-fund-line">
-              {d.shareClassFullName || '\u00A0'} (ISIN: {d.isin || '\u00A0'})
-            </div>
-            <div className="kiid-fund-line">
-              A sub-fund of {d.companyName || '\u00A0'} (the "Company")
-            </div>
-          </div>
-        </div>
+{/* Brand is hardcoded to EPIC; becomes a per-org logo at onboarding. */}
+        <KiidHeaderBlock data={d} />
 
         <div className="kiid-doc-title">Key Investor Information</div>
         <p className="kiid-doc-intro">
@@ -201,22 +184,23 @@ export default function KiidPreview({ data }) {
           </div>
         </div>
 
-        {/* Section: Past performance */}
-				<div className="kiid-section">
-					<div className="kiid-section-title">
-						PAST PERFORMANCE
-					</div>
+{/* Section: Past performance */}
+        <div className="kiid-section">
+          <div className="kiid-section-title">
+            PAST PERFORMANCE
+          </div>
           <Divider />
-					<div className="kiid-split">
-						<div className="kiid-split__left--wide">
-              {/* TODO: This needs to be computed from the Python script, and attached as an image */}
-							<PerformanceChart years={d.performanceYears} />
-						</div>
-						<div className="kiid-split__right--narrow">
-							<Bullets items={d.performanceBullets} />
-						</div>
-					</div>
-				</div>
+          <div className="kiid-split">
+            <div className="kiid-split__left--wide">
+              {/* Figures are engine-computed; the block renders its own
+                  unresolved state until validation has run. */}
+              <KiidPastPerformanceBlock data={d} />
+            </div>
+            <div className="kiid-split__right--narrow">
+              <Bullets items={d.performanceBullets} />
+            </div>
+          </div>
+        </div>
 
         {/* Section: Practical information */}
         <div className="kiid-section">

@@ -9,7 +9,6 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Lock } from 'lucide-react';
-import PerformanceEditor from './PerformanceEditor';
 import RichTextBullets from './RichTextBullets';
 import SrriScale from './SrriScale';
 import { sectionHelperText } from '@/lib/kiidData';
@@ -141,10 +140,10 @@ export default function KiidForm({ data, update }) {
           </AccordionTrigger>
           <AccordionContent>
             <HelperText text={sectionHelperText.performance} />
-            <div className="mb-4">
-              <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Performance Years</Label>
-              <PerformanceEditor years={data.performanceYears} onChange={(v) => update('performanceYears', v)} />
-            </div>
+            <p className="mb-4 text-xs text-muted-foreground rounded-md border border-dashed bg-muted/40 px-3 py-2">
+              Performance figures are calculated by the engine from the uploaded NAV file and
+              cannot be typed here. Write the surrounding narrative below.
+            </p>
             <Label className="text-xs font-medium text-muted-foreground">Performance Bullets</Label>
             <div className="mt-1">
               <RichTextBullets value={data.performanceBullets} onChange={(v) => update('performanceBullets', v)} />

@@ -2,6 +2,8 @@ import React from 'react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { ACC_DIS_OPTIONS } from '@/lib/kiidData';
 
 function Field({ label, children }) {
   return (
@@ -25,7 +27,7 @@ export default function HeaderForm({ data, update }) {
           <Field label="Sub-Fund Name">
             <Input value={data.subFundName} onChange={(e) => update('subFundName', e.target.value)} />
           </Field>
-          <Field label="Company Name">
+          <Field label="Sub Fund Umbrella">
             <Input value={data.companyName} onChange={(e) => update('companyName', e.target.value)} />
           </Field>
           <Field label="Share Class Full Name">
@@ -42,6 +44,22 @@ export default function HeaderForm({ data, update }) {
           </Field>
           <Field label="SC Letter">
             <Input value={data.scLetter} onChange={(e) => update('scLetter', e.target.value)} />
+          </Field>
+          <Field label="Acc / Dis">
+            <ToggleGroup
+              type="single"
+              value={data.accDis || ''}
+              onValueChange={(v) => v && update('accDis', v)}
+              size="sm"
+              variant="outline"
+              className="justify-start"
+            >
+              {ACC_DIS_OPTIONS.map((opt) => (
+                <ToggleGroupItem key={opt} value={opt} aria-label={opt} className="px-3">
+                  {opt}
+                </ToggleGroupItem>
+              ))}
+            </ToggleGroup>
           </Field>
           <div className="flex items-center gap-2 pt-6">
             <Switch checked={data.hedged} onCheckedChange={(v) => update('hedged', v)} id="hdr-hedged" />
