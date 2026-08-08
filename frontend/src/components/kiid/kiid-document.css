@@ -70,11 +70,13 @@
 
 .kiid-fund-line {
   font-size: 11px;
+  font-family: 'Times New Roman', Arial, serif;
 }
 
 .kiid-doc-title {
-  font-size: 13px;
-  font-weight: 700;
+  font-size: 16px;
+  font-weight: 900;
+  font-family: 'Times New Roman', Arial, serif;
 }
 
 .kiid-doc-intro {
@@ -85,8 +87,8 @@
 
 /* Section headings */
 .kiid-section-title {
-  font-weight: 700;
-  font-size: 14px;
+  font-weight: 600;
+  font-size: 13px;
   font-family: 'Times New Roman', Arial, serif;
   margin-bottom: 4px;
 }
