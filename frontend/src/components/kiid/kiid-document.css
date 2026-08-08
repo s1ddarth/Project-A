@@ -1,7 +1,7 @@
 /* UCITS KIID document stylesheet — HTML/CSS layout for on-screen preview and print. */
 
 .kiid-doc {
-  --kiid-navy: #1e2a56;
+  --epic-navy: #1B154C;
   --kiid-grey: #e1e1e1;
   --kiid-muted: #9aa0a6;
 
@@ -26,7 +26,7 @@
 }
 
 .kiid-section {
-  margin-bottom: 10px;
+  margin-top: 30px;
 }
 
 .kiid-page > :last-child {
@@ -47,7 +47,7 @@
 .kiid-brand-name {
   font-size: 22px;
   font-weight: 800;
-  color: var(--kiid-navy);
+  color: var(--epic-navy);
   line-height: 1;
 }
 
@@ -77,6 +77,7 @@
   font-size: 16px;
   font-weight: 900;
   font-family: 'Times New Roman', Arial, serif;
+  color: var(--epic-navy);
 }
 
 .kiid-doc-intro {
@@ -87,10 +88,11 @@
 
 /* Section headings */
 .kiid-section-title {
-  font-weight: 600;
+  font-weight: 500;
   font-size: 13px;
   font-family: 'Times New Roman', Arial, serif;
   margin-bottom: 4px;
+  color: var(--epic-navy);
 }
 
 /* Two-column layouts */
