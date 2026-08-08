@@ -106,7 +106,7 @@ export default function KiidWorkflow() {
         ...prev,
         srriCategory: res.srri?.srri_disclosed != null ? String(res.srri.srri_disclosed) : '',
         srriLabel: res.srri?.risk_description || '',
-        // TODO(#31): past performance is not computed by this engine — it
+        // TODO(#32): past performance is not computed by this engine — it
         // returns SRRI only. Left unresolved rather than faked; revisit when
         // the engine gains a performance calculation.
         performanceYears: [],
