@@ -225,6 +225,55 @@ class FindingCode(str, Enum):
     FREQUENCY_AUTO_SELECTED = "FREQUENCY_AUTO_SELECTED"
     DATE_FORMAT_INFERRED = "DATE_FORMAT_INFERRED"
 
+    # ------------------------------------------------------------------
+    # Upstream validation codes — raised by the pre-parse validation step,
+    # not by this module, and passed in via `extra_findings` so they surface
+    # in the same findings list and the same audit sheets as everything else.
+    # ------------------------------------------------------------------
+    CURRENCY_MISMATCH = "CURRENCY_MISMATCH"
+    TEMPLATE_CONTRACT_BREACH = "TEMPLATE_CONTRACT_BREACH"
+    UPSTREAM_VALIDATION = "UPSTREAM_VALIDATION"
+    # Return-series intake — see `returns_input.py`
+    SERIES_KIND_DETECTED = "SERIES_KIND_DETECTED"
+    SERIES_KIND_AMBIGUOUS = "SERIES_KIND_AMBIGUOUS"
+    SERIES_KIND_ASSERTED = "SERIES_KIND_ASSERTED"
+    RETURNS_CONVERTED_TO_PRICES = "RETURNS_CONVERTED_TO_PRICES"
+
+    # ------------------------------------------------------------------
+    # Past-performance codes — raised by `past_performance.py`
+    # (Reg. (EU) No 583/2010, Arts. 15-19 and Annex III), not by this module.
+    #
+    # They live here because a KIID is one document produced from one NAV
+    # upload: the SRRI and the bar chart are two readings of the same series,
+    # and the UI renders one findings list.  Two `Finding` classes with two
+    # code enums would force every consumer to branch on which engine spoke.
+    # Adding members is additive and breaks nothing that keys off the
+    # existing codes.
+    # ------------------------------------------------------------------
+    # errors
+    NO_COMPLETE_CALENDAR_YEAR = "NO_COMPLETE_CALENDAR_YEAR"        # Art. 15(4)
+    REFERENCE_DATE_BEFORE_SERIES = "REFERENCE_DATE_BEFORE_SERIES"
+    BENCHMARK_UNUSABLE = "BENCHMARK_UNUSABLE"
+    # warnings
+    FEWER_THAN_FIVE_YEARS = "FEWER_THAN_FIVE_YEARS"                # Art. 15(2)
+    MISSING_YEAR = "MISSING_YEAR"                                  # Art. 15(3)
+    STALE_YEAR_ANCHOR = "STALE_YEAR_ANCHOR"
+    EXTREME_ANNUAL_RETURN = "EXTREME_ANNUAL_RETURN"
+    BENCHMARK_YEAR_MISSING = "BENCHMARK_YEAR_MISSING"              # Art. 18(2)
+    CLIENT_FIGURE_MISMATCH = "CLIENT_FIGURE_MISMATCH"
+    CLIENT_FIGURE_YEAR_UNMATCHED = "CLIENT_FIGURE_YEAR_UNMATCHED"
+    MATERIAL_CHANGE_IN_WINDOW = "MATERIAL_CHANGE_IN_WINDOW"        # Art. 17
+    SIMULATED_PERFORMANCE_SHOWN = "SIMULATED_PERFORMANCE_SHOWN"    # Art. 19(2)
+    PARTIAL_YEAR_EXCLUDED = "PARTIAL_YEAR_EXCLUDED"
+    STALE_PUBLICATION_WINDOW = "STALE_PUBLICATION_WINDOW"          # Art. 23(3)
+    # info
+    CURRENT_YEAR_EXCLUDED = "CURRENT_YEAR_EXCLUDED"                # Art. 15(6)
+    CHART_WINDOW_SELECTED = "CHART_WINDOW_SELECTED"
+    ASSUMED_NET_OF_ONGOING_CHARGES = "ASSUMED_NET_OF_ONGOING_CHARGES"
+    ASSUMED_DISTRIBUTION_ADJUSTED = "ASSUMED_DISTRIBUTION_ADJUSTED"
+    ANCHOR_TOLERANCE_SET = "ANCHOR_TOLERANCE_SET"
+    CLIENT_FIGURES_RECONCILED = "CLIENT_FIGURES_RECONCILED"
+
 
 class Finding(BaseModel):
     """One data-quality or methodology observation, renderable by the UI."""
@@ -475,8 +524,39 @@ def cesr_volatility(returns, m: int) -> float:
 
 
 def _buffer_core(s: pd.Series, buffer_months: int) -> pd.Series:
-    """Box 3 applied to a clean, NaN-free series of monthly reference points."""
+    """Box 3 applied to a clean, NaN-free series of monthly reference points.
+
+    Two stages, exactly as CESR/10-673 Box 3 defines them:
+
+    §2 — TRIGGER. The indicator is revised only if the volatility "has fallen
+         outside the bucket corresponding to its previous risk category on each
+         weekly or monthly data reference point over the preceding 4 months".
+         The test is therefore about *departure from the currently disclosed
+         class*, not about arrival at a single new one. One reading back at the
+         old class resets the count.
+
+    §3 — SELECTION. Once triggered, and where the volatility "has moved so as to
+         correspond to more than one bucket during the 4-month period", the fund
+         takes "the bucket which its relevant volatility has matched for the
+         majority of the ... data reference point[s]".
+
+    NOTE: the earlier implementation required every point in the window to equal
+    the *same* new class (`all(win == cur)`). That condition is strictly stronger
+    than §2, so it never migrated when volatility straddled two new buckets — a
+    fund could hold a stale class indefinitely, understating risk when volatility
+    had risen and overstating it when it had fallen. §3 was absent entirely.
+
+    HOUSE CONVENTION: §3 says "majority" but is silent on ties (e.g. 5,6,5,6 over
+    four points). Ties resolve to the HIGHER risk class — where the rule does not
+    decide, disclose the greater risk.
+
+    The window is a real 4-CALENDAR-MONTH lookback, not a fixed count of points,
+    so "each ... data reference point over the preceding 4 months" means every
+    point on the calculation grid: ~17 weekly points on a weekly basis, 4 monthly
+    points on a monthly basis. See `apply_buffer_zone`.
+    """
     vals = s.to_numpy(dtype=float)
+    idx = s.index
     out = np.full(len(vals), np.nan)
     for i, cur in enumerate(vals):
         if i == 0:
@@ -486,10 +566,31 @@ def _buffer_core(s: pd.Series, buffer_months: int) -> pd.Series:
         if cur == prev:
             out[i] = prev
             continue
-        win = vals[max(0, i - buffer_months + 1): i + 1]
-        # migration confirmed only if the new class held at every monthly
-        # reference point across the buffer window
-        out[i] = cur if (len(win) >= buffer_months and bool(np.all(win == cur))) else prev
+
+        window_start = idx[i] - pd.DateOffset(months=buffer_months)
+        # Month-end reference points are not evenly spaced (30 vs 31 days), so a
+        # plain month offset from e.g. 30 Nov lands on 30 Jul and drags the 31 Jul
+        # point into the window — 5 monthly points instead of 4. Snap the anchor
+        # back onto month-end when the reference point itself is a month-end.
+        if idx[i].is_month_end:
+            window_start = window_start + pd.offsets.MonthEnd(0)
+
+        # §2 — the series must actually span the full 4 months before a
+        # migration can be confirmed at all.
+        if idx[0] > window_start:
+            out[i] = prev
+            continue
+
+        win = vals[idx.searchsorted(window_start, side="right"): i + 1]
+
+        # §2 — the old class reappeared at some reference point: no revision.
+        if len(win) == 0 or bool(np.any(win == prev)):
+            out[i] = prev
+            continue
+
+        # §3 — majority bucket across the window; ties go to the higher class.
+        classes, counts = np.unique(win, return_counts=True)
+        out[i] = float(classes[counts == counts.max()].max())
     return pd.Series(out, index=s.index)
 
 
@@ -497,19 +598,29 @@ def apply_buffer_zone(srri_raw: pd.Series,
                       buffer_months: int = BUFFER_MONTHS_DEFAULT) -> pd.Series:
     """Box 3 buffer zone — THE single implementation, used by both bases.
 
-    The rule is defined on *monthly* reference points regardless of the
-    calculation basis, so the raw series is condensed to month-ends, buffered,
-    and forward-filled back onto the calculation grid.  For a monthly basis the
-    condensation is the identity, so the two bases share one code path.
+    Box 3 §2 tests "each weekly OR monthly data reference point over the
+    preceding 4 months".  The reference points are those of the basis the fund
+    is calculated on, so the rule is applied directly to the calculation grid:
+
+        weekly basis  -> ~17 weekly reference points in the 4-month window
+        monthly basis -> 4 monthly reference points in the 4-month window
+
+    HOUSE DECISION (2026-08-09): monitoring frequency follows the calculation
+    basis.  A previous version condensed every series to month-ends with
+    `resample("ME")` before applying the rule, so a weekly-basis fund was tested
+    on 4 month-end snapshots rather than every week.  That let a fund migrate on
+    four month-end readings while falling back to the old class in the weeks
+    between.  Both readings are permitted by the wording; this is the stricter
+    one and the one that matches how the fund is actually calculated.
 
     Dropping NaN before buffering is what fixes NOTE 3 in the module docstring.
     """
     if srri_raw.empty:
         return srri_raw.astype(float)
-    monthly = srri_raw.resample("ME").last().dropna()
-    if monthly.empty:
+    points = srri_raw.dropna()
+    if points.empty:
         return pd.Series(np.nan, index=srri_raw.index)
-    disclosed = _buffer_core(monthly, buffer_months)
+    disclosed = _buffer_core(points, buffer_months)
     return disclosed.reindex(srri_raw.index, method="ffill")
 
 
@@ -641,12 +752,56 @@ def _read_tabular(raw: bytes, kind: str, filename: Optional[str],
                               "Save the file as CSV or XLSX with a date column and a price column."))
 
 
+_PAREN_SUFFIX = re.compile(r"\s*\([^)]*\)\s*$")
+
+
+def _norm_header(name: object) -> str:
+    """Normalise a column label for alias lookup.
+
+    Strips a trailing parenthetical so that 'NAV Price (USD)' — the header the
+    KIID NAV template writes, with the currency appended — still matches the
+    'nav price' alias instead of falling through to positional guessing.
+    """
+    s = str(name).strip().lower()
+    return _PAREN_SUFFIX.sub("", s).strip()
+
+
+def _find_header_row(raw: bytes, kind: str, filename: Optional[str],
+                     sheet: Optional[Union[str, int]], scan: int = 15) -> Optional[int]:
+    """Locate the real header row when a file carries a metadata block above it.
+
+    The KIID NAV template puts ISIN / Fund Name / Period / Frequency / Source in
+    rows 1-5, the column headers on row 7 and the first observation on row 8.
+    Read naively, pandas takes row 1 as the header and the metadata block as
+    data — which then survives only because the junk rows fail date parsing and
+    get dropped. That is a silent near-miss, so find the header row properly.
+
+    Returns the number of rows to skip, or None if no better row exists.
+    """
+    try:
+        probe = _read_tabular(raw, kind, filename, sheet, 0)
+    except SRRIInputError:
+        return None
+
+    def row_matches(values) -> bool:
+        norm = {_norm_header(v) for v in values if v is not None and str(v) != "nan"}
+        return bool(norm & _DATE_ALIASES) and bool(norm & _PRICE_ALIASES)
+
+    if row_matches(probe.columns):
+        return None                                    # already correct
+
+    for i in range(min(scan, len(probe))):
+        if row_matches(probe.iloc[i].tolist()):
+            return i + 1                               # header is the row after the skip
+    return None
+
+
 def _pick_columns(df: pd.DataFrame, date_column: Optional[str], price_column: Optional[str],
                   findings: list[Finding]) -> tuple[str, str]:
     if isinstance(df.columns, pd.MultiIndex):
         df.columns = ["_".join(str(x) for x in c if str(x) != "nan").strip("_")
                       for c in df.columns]
-    lookup = {str(c).strip().lower(): c for c in df.columns}
+    lookup = {_norm_header(c): c for c in df.columns}
 
     dcol = date_column if date_column in df.columns else None
     pcol = price_column if price_column in df.columns else None
@@ -802,7 +957,18 @@ def read_prices(source: Source,
         if isinstance(df.index, pd.DatetimeIndex):
             df = df.reset_index()
     else:
-        df = _read_tabular(raw, _sniff_kind(raw, fname), fname, sheet, skiprows)
+        kind = _sniff_kind(raw, fname)
+        if skiprows == 0:
+            detected = _find_header_row(raw, kind, fname, sheet)
+            if detected:
+                findings.append(_info(
+                    FindingCode.COLUMNS_ASSUMED,
+                    f"A metadata block was detected above the data — reading the "
+                    f"column headers from row {detected + 1} and the first "
+                    f"observation from row {detected + 2}.",
+                    skiprows_applied=detected))
+                skiprows = detected
+        df = _read_tabular(raw, kind, fname, sheet, skiprows)
 
     raw_rows = len(df)
     if raw_rows == 0:
