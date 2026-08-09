@@ -16,6 +16,14 @@ _ENGINE_DIR = Path(__file__).resolve().parent.parent / "srri_engine"
 if str(_ENGINE_DIR) not in sys.path:
     sys.path.insert(0, str(_ENGINE_DIR))
 
+from past_performance import (  # noqa: E402,F401
+    ENGINE_VERSION as PP_ENGINE_VERSION,
+    OutputProfile,
+    PastPerformanceResult,
+    PPStatus,
+    merge_into_workbook,
+    run_kiid,
+)
 from srri_engine import (  # noqa: E402,F401
     ENGINE_NAME,
     ENGINE_VERSION,
@@ -28,6 +36,7 @@ from srri_engine import (  # noqa: E402,F401
     SRRIResult,
     Severity,
     export_workbook,
+    read_prices,
     run,
 )
 
@@ -35,5 +44,8 @@ __all__ = [
     "ENGINE_NAME", "ENGINE_VERSION", "METHODOLOGY_REF",
     "DateFormat", "Finding", "Frequency", "ResultStatus",
     "SRRIInputError", "SRRIResult", "Severity",
-    "export_workbook", "run",
+    "export_workbook", "run", "read_prices",
+    # past-performance engine
+    "PP_ENGINE_VERSION", "OutputProfile", "PastPerformanceResult", "PPStatus",
+    "merge_into_workbook", "run_kiid",
 ]
