@@ -157,18 +157,23 @@ export default function KiidWorkflow() {
 
   return (
     <div className="h-full flex flex-col bg-background">
-      <header className="flex items-center justify-between gap-4 px-5 h-14 border-b bg-card shrink-0">
-        <div className="flex items-center gap-3">
+      <header className="grid grid-cols-3 items-center gap-4 px-5 h-14 border-b bg-card shrink-0">
+        <div className="flex items-center justify-start">
+          {step > 0 && (
+            <Button variant="ghost" size="sm" onClick={() => setStep((s) => Math.max(0, s - 1))}>
+              <ArrowLeft className="h-4 w-4 mr-1" /> Back
+            </Button>
+          )}
+        </div>
+
+        <div className="flex items-center justify-center gap-3">
           <div className="h-7 w-7 rounded-md bg-primary flex items-center justify-center text-primary-foreground font-bold text-sm">
             K
           </div>
-          <h1 className="text-sm font-semibold">UCITS KIID Generator</h1>
+          <h1 className="text-sm font-semibold">KIID Generator</h1>
         </div>
-        {step > 0 && (
-          <Button variant="ghost" size="sm" onClick={() => setStep((s) => Math.max(0, s - 1))}>
-            <ArrowLeft className="h-4 w-4 mr-1" /> Back
-          </Button>
-        )}
+
+        <div />
       </header>
 
       <div className="px-5 pt-4 shrink-0">
