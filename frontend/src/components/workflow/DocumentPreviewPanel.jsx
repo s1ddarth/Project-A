@@ -36,7 +36,7 @@ function Block({ title, computed, children }) {
 export default function DocumentPreviewPanel({ data }) {
   const d = data || {};
   const srriResolved = isSrriResolved(d.srriCategory);
-
+  // TODO: This is not what prints, it is significantly different from the preview generated in the next step; we need to either modify the wording, or update the preview to match what appears in the next step. 
   return (
     <section className="rounded-xl border bg-card shadow-sm overflow-hidden">
       <div className="border-b bg-muted/40 px-4 py-2.5">
