@@ -165,7 +165,7 @@ export default function ValidationStep({
         awaitingFile={ran && navFindings === null}
       />
 
-      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(0,420px)]">
+      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
         {/* ---------------- LEFT — inputs ---------------- */}
         <div className="space-y-5 min-w-0">
           <section className="rounded-xl border bg-card p-5 shadow-sm">
