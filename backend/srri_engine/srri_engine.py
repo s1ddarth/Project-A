@@ -84,7 +84,10 @@ log = logging.getLogger("srri_engine")
 # ======================================================================
 
 ENGINE_NAME = "srri_engine"
-ENGINE_VERSION = "2.0.0"
+ENGINE_VERSION = "3.0.0"   # 3.0.0: CESR Box 3 §2/§3 corrected — disclosed
+                           # SRRI values move, so this is a MAJOR bump.
+                           # A stored engine_version must identify exactly
+                           # one behaviour (rule 5).
 METHODOLOGY_REF = (
     "CESR/10-673 (1 July 2010); Commission Regulation (EU) No 583/2010"
 )
