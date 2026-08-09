@@ -62,7 +62,10 @@ export default function KiidWorkflow() {
   const [navFile, setNavFile] = useState(null);
   const [frequency, setFrequency] = useState('auto');
   const [dateFormat, setDateFormat] = useState('dmy');
+  // Blank means "derive from the last NAV observation" — see srriApi.
+  const [referenceDate, setReferenceDate] = useState('');
   const [audit, setAudit] = useState(null);
+  const [disclosures, setDisclosures] = useState([]);
 
   const update = useCallback((field, value) => {
     setData((prev) => ({ ...prev, [field]: value }));
@@ -75,7 +78,10 @@ export default function KiidWorkflow() {
     setNavFindings(null);
     setAcknowledged(false);
     setAudit(null);
-    setData((prev) => ({ ...prev, srriCategory: '', srriLabel: '' }));
+    setDisclosures([]);
+    setData((prev) => ({
+      ...prev, srriCategory: '', srriLabel: '', performanceYears: [],
+    }));
   }, []);
 
   const onNavFile = useCallback((file) => {
@@ -98,22 +104,32 @@ export default function KiidWorkflow() {
         file: navFile,
         frequency,
         dateFormat,
+        currency: data.shareClassBaseCurrency,
+        referenceDate,
+        // Art. 15(5)(b) only applies where entry or exit charges exist.
+        hasCharges: Number(data.entryCost) > 0 || Number(data.exitCost) > 0,
       });
       setHeaderFindings(res.header_findings || []);
       setNavFindings(navFile ? res.nav_findings || [] : null);
       setAudit(res.audit || null);
+      setDisclosures(res.past_performance?.disclosures || []);
       setData((prev) => ({
         ...prev,
         srriCategory: res.srri?.srri_disclosed != null ? String(res.srri.srri_disclosed) : '',
         srriLabel: res.srri?.risk_description || '',
-        // TODO(#32): past performance is not computed by this engine — it
-        // returns SRRI only. Left unresolved rather than faked; revisit when
-        // the engine gains a performance calculation.
-        performanceYears: [],
+        // Engine-computed from the same upload as the SRRI. Blank years are
+        // kept: Art. 15(3) requires the year to appear with nothing else, so a
+        // blank bar is still a bar and must not be dropped.
+        performanceYears: (res.past_performance?.bars || []).map((b) => ({
+          year: b.year,
+          value: b.fund_return_pct,
+          isBlank: b.is_blank,
+        })),
       }));
     } catch (err) {
       setHeaderFindings(errorAsFinding(err));
       setNavFindings(null);
+      setDisclosures([]);
       setData((prev) => ({ ...prev, srriCategory: '', srriLabel: '', performanceYears: [] }));
     } finally {
       setValidating(false);
@@ -175,6 +191,9 @@ export default function KiidWorkflow() {
               onFrequencyChange={setFrequency}
               dateFormat={dateFormat}
               onDateFormatChange={setDateFormat}
+              referenceDate={referenceDate}
+              onReferenceDateChange={setReferenceDate}
+              disclosures={disclosures}
               headerFindings={headerFindings}
               navFindings={navFindings}
               validating={validating}

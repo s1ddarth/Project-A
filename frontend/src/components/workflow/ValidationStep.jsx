@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -112,6 +113,9 @@ export default function ValidationStep({
   onFrequencyChange,
   dateFormat,
   onDateFormatChange,
+  referenceDate,
+  onReferenceDateChange,
+  disclosures,
   headerFindings,
   navFindings,
   validating,
@@ -131,6 +135,9 @@ export default function ValidationStep({
         file: navFile,
         frequency,
         dateFormat,
+        currency: data.shareClassBaseCurrency,
+        referenceDate,
+        hasCharges: Number(data.entryCost) > 0 || Number(data.exitCost) > 0,
         filename: `${(navFile?.name || 'nav').replace(/\.[^.]+$/, '')}-srri-calculation.xlsx`,
       });
     } catch (err) {
@@ -223,6 +230,24 @@ export default function ValidationStep({
                 </Select>
               </div>
             </div>
+            <div className="space-y-1 mt-3">
+              <Label className="text-xs font-medium text-muted-foreground">
+                Reference date
+              </Label>
+              <Input
+                type="date"
+                value={referenceDate || ''}
+                onChange={(e) => onReferenceDateChange(e.target.value)}
+                className="max-w-[200px]"
+              />
+              {/* Deliberately NOT defaulted to today: the same file must produce
+                  the same document whenever it is re-run (rule 5). */}
+              <p className="text-[11px] text-muted-foreground">
+                Leave blank to use the last date in the NAV file. Governs which
+                calendar years appear in past performance.
+              </p>
+            </div>
+
             {/* The engine cannot tell 03/04 apart on its own. Getting this wrong
                 produces a wrong SRRI with no other symptom, so it is an explicit
                 choice rather than a silent default. */}
@@ -301,6 +326,25 @@ export default function ValidationStep({
               <ValidationResults findings={navFindings} />
             )}
           </section>
+
+          {disclosures?.length > 0 && (
+            <section className="rounded-xl border bg-card p-4 shadow-sm">
+              <h2 className="text-sm font-semibold mb-0.5">Required disclosures</h2>
+              {/* Art. 15(5). These are NOT in the calculation workbook by
+                  design — they must sit alongside the published chart, so the
+                  document layer takes them from the response. */}
+              <p className="text-[11px] text-muted-foreground mb-2.5">
+                Art. 15(5) — must appear alongside the past-performance chart.
+              </p>
+              <ul className="space-y-1.5">
+                {disclosures.map((d, i) => (
+                  <li key={i} className="text-[11px] leading-relaxed border-l-2 border-primary/30 pl-2">
+                    {d}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
 
           <DocumentPreviewPanel data={data} />
 
