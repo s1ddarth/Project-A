@@ -387,3 +387,31 @@ library and CLI.
 "Hard stop" as stated admits no exception, but an attributable, logged override is
 a different thing from a flag anyone can set. Left in place for now because
 nothing user-facing can reach it.
+
+### 14.2 Header validation lives in Python (9 August 2026)
+
+**Decision.** ISIN check-digit validation — and header validation generally — runs
+on the Python service, not in the browser. Closes §10-adjacent issue #18.
+
+The reasoning is rule 5 rather than rule 4: validation findings are part of what
+makes a published document reproducible, so they belong on the tier that carries a
+version number and an audit trail. A duplicate implementation in JavaScript is the
+pattern rule 4 exists to prevent, and it would drift.
+
+Implemented in `backend/api/header_checks.py` (PR #33), covering ISO 6166 shape and
+check digit, benchmark ISIN, required master-data fields, ISO 4217 currency shape,
+share-class currency consistency and the Acc/Dis enum. Findings use the same wire
+shape as the engine's, so the UI renders both passes through one component and keys
+off `code`, never message text.
+
+The trade-off accepted: no instant client-side feedback on a mistyped ISIN. Each
+finding carries a `remediation` string to compensate — `ISIN_CHECKSUM` reports the
+digit the ISIN should have ended with.
+
+**Related judgement call.** A currency mismatch between share class and sub-fund is
+a **warning**, not a blocking error. A share class denominated differently from the
+fund base is normal — that is what a currency or hedged share class is, and
+`is_hedged` marks it. It warns only when the classes differ *and* the class is not
+hedged, because the SRRI then carries unhedged FX volatility. §8 calls currency
+mismatch blocking, but that rule concerns the share class versus **the NAV file**,
+and a NAV file carries no currency — so §8 as written is not implementable.
