@@ -181,14 +181,16 @@ export default function ValidationStep({
             <div className="flex items-start justify-between gap-4 mb-1">
               <h2 className="text-base font-semibold">NAV file</h2>
               <Button asChild variant="outline" size="sm" className="shrink-0">
-                <a href="/nav-template.xlsx" download>
+                {/* Stored under a URL-safe name; saved under the real one. */}
+                <a href="/nav-template.xlsx" download="NAV Request Template_V1.xlsx">
                   <Download className="h-4 w-4 mr-1.5" /> Template
                 </a>
               </Button>
             </div>
             <p className="text-xs text-muted-foreground mb-4">
               Upload the Excel NAV history used to compute SRRI and past performance. Download the
-              template if you need the expected column layout.
+              template if you need the expected layout — fill in the header block and the
+              Date / NAV columns from row 8.
             </p>
             <label className="flex flex-col items-center justify-center gap-2 border-2 border-dashed rounded-lg p-8 cursor-pointer hover:bg-muted/40 transition">
               <FileSpreadsheet className="h-8 w-8 text-muted-foreground" />

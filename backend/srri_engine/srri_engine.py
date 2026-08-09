@@ -643,6 +643,11 @@ _PRICE_ALIASES = {
     "price", "prices", "nav", "nav price", "navprice", "nav per share",
     "close", "closing price", "adj close", "adjusted close",
     "value", "level", "unit price", "share price", "mid", "bid",
+    # The house NAV Request Template labels the column by its cadence, and its
+    # Frequency field implies all three. Without these, _find_header_row cannot
+    # match the header and the metadata block above it is read as data — the
+    # "silent near-miss" that function exists to prevent.
+    "daily nav", "weekly nav", "monthly nav",
 }
 
 _DMY_LIKE = re.compile(r"^\s*(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{2,4})")
