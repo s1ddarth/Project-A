@@ -27,13 +27,19 @@ class ApiFinding(BaseModel):
     model_config = {"populate_by_name": True}
 
 
-def from_engine_finding(f: EngineFinding, index: int) -> ApiFinding:
-    """Engine findings carry an enum code and no id; the wire format needs both."""
+def from_engine_finding(f: EngineFinding, index: int, pass_name: str = "nav") -> ApiFinding:
+    """Engine findings carry an enum code and no id; the wire format needs both.
+
+    Codes are enums in srri_engine and in past_performance, so `.value` is taken
+    defensively — a plain string code must survive too.
+    """
+    code = getattr(f.code, "value", f.code)
+    severity = getattr(f.severity, "value", f.severity)
     return ApiFinding(
-        id=f"nav-{index}",
-        **{"pass": "nav"},
-        code=f.code.value,
-        severity=f.severity.value,
+        id=f"{pass_name}-{index}",
+        **{"pass": pass_name},
+        code=code,
+        severity=severity,
         message=f.message,
         remediation=f.remediation,
         detail=f.detail or {},
@@ -77,6 +83,37 @@ class AuditPayload(BaseModel):
     min_periods_is_regulatory_default: bool
 
 
+class YearBarPayload(BaseModel):
+    """One bar of the Annex III chart.
+
+    A blank bar is still a bar — Art. 15(3) requires the year to appear with its
+    date and nothing else — so `is_blank` is carried rather than the year being
+    dropped from the list.
+    """
+    year: int
+    fund_return_pct: Optional[float] = None
+    benchmark_return_pct: Optional[float] = None
+    is_blank: bool = False
+    blank_reason: Optional[str] = None
+    is_simulated: bool = False
+    prior_to_material_change: bool = False
+
+
+class PastPerformancePayload(BaseModel):
+    """Past performance, computed from the same upload as the SRRI.
+
+    `disclosures` are the Art. 15(5) statements that must sit alongside the
+    published chart. They are deliberately not in the workbook — the document
+    layer takes them from here.
+    """
+    status: str
+    bars: list[YearBarPayload] = Field(default_factory=list)
+    disclosures: list[str] = Field(default_factory=list)
+    currency: Optional[str] = None
+    reference_date: Optional[date] = None
+    engine_version: Optional[str] = None
+
+
 class ValidateResponse(BaseModel):
     """Envelope returned by POST /v1/srri.
 
@@ -91,4 +128,5 @@ class ValidateResponse(BaseModel):
     header_findings: list[ApiFinding] = Field(default_factory=list)
     nav_findings: list[ApiFinding] = Field(default_factory=list)
     srri: Optional[SrriPayload] = None
+    past_performance: Optional[PastPerformancePayload] = None
     audit: Optional[AuditPayload] = None

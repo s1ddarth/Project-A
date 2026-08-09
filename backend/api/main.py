@@ -19,6 +19,8 @@ from __future__ import annotations
 import json
 import logging
 import os
+from datetime import date
+from typing import Optional
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
@@ -28,20 +30,27 @@ from engine import (
     ENGINE_NAME,
     ENGINE_VERSION,
     METHODOLOGY_REF,
+    PP_ENGINE_VERSION,
     DateFormat,
     Frequency,
+    OutputProfile,
+    PPStatus,
     ResultStatus,
     SRRIInputError,
     Severity,
     export_workbook,
-    run,
+    merge_into_workbook,
+    read_prices,
+    run_kiid,
 )
 from header_checks import check_header
 from models import (
     ApiFinding,
     AuditPayload,
+    PastPerformancePayload,
     SrriPayload,
     ValidateResponse,
+    YearBarPayload,
     from_engine_finding,
 )
 
@@ -79,6 +88,7 @@ def health() -> dict:
         "status": "ok",
         "engine_name": ENGINE_NAME,
         "engine_version": ENGINE_VERSION,
+        "past_performance_engine_version": PP_ENGINE_VERSION,
         "methodology_ref": METHODOLOGY_REF,
     }
 
@@ -102,23 +112,68 @@ async def _read_upload(file: UploadFile) -> bytes:
     return raw
 
 
-def _run_engine(raw: bytes, filename: str, frequency: str, date_format: str):
-    """Call the engine, converting only genuinely unreadable input into HTTP."""
+def _resolve_reference_date(raw: bytes, filename: str, fmt: DateFormat,
+                            supplied: Optional[str]) -> "date":
+    """The KIID reference date, which the NAV file does not carry.
+
+    Defaults to the LAST OBSERVATION in the series, never to today. Defaulting to
+    today would make the same file produce a different document next month — past
+    performance would gain or lose a calendar year with no input having changed —
+    and a document that is not a function of its inputs cannot be re-derived
+    (rule 5).
+
+    Deriving it costs one extra parse of the same bytes. The hash is taken over
+    those bytes, so provenance is unaffected; only the work is duplicated.
+    """
+    if supplied:
+        try:
+            return date.fromisoformat(supplied.strip())
+        except ValueError:
+            raise HTTPException(
+                422, f"reference_date {supplied!r} is not an ISO date (YYYY-MM-DD).")
+    try:
+        ps = read_prices(raw, date_format=fmt, filename=filename)
+    except SRRIInputError as exc:
+        raise HTTPException(422, detail={
+            "code": exc.finding.code.value,
+            "severity": exc.finding.severity.value,
+            "message": exc.finding.message,
+            "remediation": exc.finding.remediation,
+        })
+    return ps.prices.index[-1].date()
+
+
+def _run_engines(raw: bytes, filename: str, frequency: str, date_format: str,
+                 currency: str, reference_date: Optional[str],
+                 has_charges: bool):
+    """Both KIID calculations from one upload, parsed once.
+
+    `run_kiid` hands the same parsed series to both engines, so the SRRI and the
+    past-performance figures carry an identical input SHA-256. Calling the two
+    engines separately would read the file twice and the hash would stop proving
+    what was calculated.
+    """
     freq = _parse_enum(frequency, Frequency, "frequency")
     fmt = _parse_enum(date_format, DateFormat, "date_format")
+    ref = _resolve_reference_date(raw, filename, fmt, reference_date)
     try:
-        return run(raw, freq, date_format=fmt, filename=filename)
+        return run_kiid(
+            raw,
+            frequency=freq,
+            reference_date=ref,
+            currency=(currency or "").strip().upper(),
+            has_entry_or_exit_charges=has_charges,
+            date_format=fmt,
+            filename=filename,
+        ) + (ref,)
     except SRRIInputError as exc:
         # Not recoverable into findings — the bytes are not a price series.
-        raise HTTPException(
-            422,
-            detail={
-                "code": exc.finding.code.value,
-                "severity": exc.finding.severity.value,
-                "message": exc.finding.message,
-                "remediation": exc.finding.remediation,
-            },
-        )
+        raise HTTPException(422, detail={
+            "code": exc.finding.code.value,
+            "severity": exc.finding.severity.value,
+            "message": exc.finding.message,
+            "remediation": exc.finding.remediation,
+        })
 
 
 @app.post("/v1/srri", response_model=ValidateResponse)
@@ -129,6 +184,13 @@ async def validate_and_calculate(
     ),
     frequency: str = Form("auto", description="auto | weekly | monthly"),
     date_format: str = Form("dmy", description="dmy | mdy | iso | auto"),
+    currency: str = Form("", description="Share class base currency, ISO 4217."),
+    reference_date: str = Form(
+        "", description="KIID reference date, ISO. Defaults to the last NAV observation."
+    ),
+    has_entry_or_exit_charges: bool = Form(
+        True, description="Disapplies the Art. 15(5)(b) charges statement when false."
+    ),
     file: UploadFile | None = File(
         None, description="NAV history (.xlsx/.xls/.csv/.txt). Optional."
     ),
@@ -155,17 +217,22 @@ async def validate_and_calculate(
         )
 
     raw = await _read_upload(file)
-    result = _run_engine(raw, file.filename or "upload", frequency, date_format)
+    filename = file.filename or "upload"
+    result, pp_result, ref_date = _run_engines(
+        raw, filename, frequency, date_format,
+        currency, reference_date or None, has_entry_or_exit_charges,
+    )
 
-    # `run()` resolves the frequency in both validate() and calculate(), and each
-    # appends to the same list, so FREQUENCY_AUTO_SELECTED arrives twice. Showing
-    # a user the same sentence twice is a UI bug, so collapse exact duplicates
-    # here. Fixing the double-append belongs in the engine, which this service
-    # does not modify.
+    # The engine appends FREQUENCY_AUTO_SELECTED from both validate() and
+    # calculate() against the same list, and the two engines share upstream
+    # findings, so exact duplicates reach the wire. Showing a user the same
+    # sentence twice is a UI bug; collapse them here. The double-append should
+    # be fixed in the engine (#31), which this service does not modify.
     seen: set[tuple[str, str]] = set()
     nav_findings: list[ApiFinding] = []
-    for f in result.findings:
-        key = (f.code.value, f.message)
+    for f in list(result.findings) + list(pp_result.findings):
+        code = getattr(f.code, "value", f.code)
+        key = (code, f.message)
         if key in seen:
             continue
         seen.add(key)
@@ -173,11 +240,13 @@ async def validate_and_calculate(
 
     # A header error blocks even when the file itself is clean: the figure would
     # be attached to the wrong share class.
-    if header_blocked or result.status is ResultStatus.BLOCKED:
+    if header_blocked or result.status is ResultStatus.BLOCKED \
+            or pp_result.status is PPStatus.BLOCKED:
         status = "blocked"
     elif result.status is ResultStatus.NO_VALID_SRRI:
         status = "no_valid_srri"
-    elif any(f.severity is Severity.WARNING for f in result.findings) or any(
+    elif any(f.severity is Severity.WARNING
+             for f in list(result.findings) + list(pp_result.findings)) or any(
         f.severity == "warning" for f in header_findings
     ):
         status = "ok_with_warnings"
@@ -219,15 +288,41 @@ async def validate_and_calculate(
             min_periods_is_regulatory_default=a.min_periods_is_regulatory_default,
         )
 
+    past_performance = None
+    if status != "blocked":
+        past_performance = PastPerformancePayload(
+            status=pp_result.status.value,
+            bars=[
+                YearBarPayload(
+                    year=b.year,
+                    fund_return_pct=b.fund_return_pct,
+                    benchmark_return_pct=b.benchmark_return_pct,
+                    is_blank=b.is_blank,
+                    blank_reason=b.blank_reason.value if b.blank_reason else None,
+                    is_simulated=b.is_simulated,
+                    prior_to_material_change=b.prior_to_material_change,
+                )
+                for b in pp_result.bars
+            ],
+            # Art. 15(5) statements. They are deliberately not in the workbook —
+            # the document layer takes them from here.
+            disclosures=pp_result.disclosures.as_list() if pp_result.disclosures else [],
+            currency=(currency or "").strip().upper() or None,
+            reference_date=ref_date,
+            engine_version=PP_ENGINE_VERSION,
+        )
+
     log.info(
-        "srri status=%s sha=%s srri=%s file=%s",
-        status, result.audit.input_sha256[:12], result.srri_disclosed, file.filename,
+        "kiid status=%s sha=%s srri=%s pp=%s bars=%d ref=%s file=%s",
+        status, result.audit.input_sha256[:12], result.srri_disclosed,
+        pp_result.status.value, len(pp_result.bars), ref_date, filename,
     )
     return ValidateResponse(
         status=status,
         header_findings=header_findings,
         nav_findings=nav_findings,
         srri=srri,
+        past_performance=past_performance,
         audit=audit,
     )
 
@@ -236,29 +331,45 @@ async def validate_and_calculate(
 async def workbook(
     frequency: str = Form("auto"),
     date_format: str = Form("dmy"),
+    currency: str = Form(""),
+    reference_date: str = Form(""),
+    has_entry_or_exit_charges: bool = Form(True),
     file: UploadFile = File(..., description="The same NAV file that was validated."),
 ) -> Response:
-    """The Summary / Calculations / Distribution / Methodology / Audit workbook.
+    """The full KIID calculation workbook: SRRI sheets plus past performance.
 
-    A genuine audit artifact derived from the result, not the result itself —
-    it should be attached to the published document as evidence.
+    A genuine audit artifact derived from the results, not the results
+    themselves — it should be attached to the published document as evidence.
+
+    Note the Art. 15(5) statements are NOT in this workbook by design. They are
+    required alongside the published chart and come back on the /v1/srri
+    response instead.
     """
     raw = await _read_upload(file)
-    result = _run_engine(raw, file.filename or "upload", frequency, date_format)
+    filename = file.filename or "upload"
+    result, pp_result, _ = _run_engines(
+        raw, filename, frequency, date_format,
+        currency, reference_date or None, has_entry_or_exit_charges,
+    )
     if result.status is ResultStatus.BLOCKED:
         raise HTTPException(
             422, "The NAV file has blocking errors; no workbook was produced."
         )
 
     xlsx = export_workbook(result)
-    stem = (file.filename or "nav").rsplit(".", 1)[0][:60]
+    if pp_result.status is not PPStatus.BLOCKED:
+        # One upload, one workbook, both halves sharing an input hash.
+        xlsx = merge_into_workbook(xlsx, pp_result, profile=OutputProfile.KIID)
+
+    stem = filename.rsplit(".", 1)[0][:60]
     return Response(
         content=xlsx,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={
-            "Content-Disposition": f'attachment; filename="{stem}-srri-calculation.xlsx"',
+            "Content-Disposition": f'attachment; filename="{stem}-kiid-calculation.xlsx"',
             # So the browser can name the download and show provenance.
             "X-Engine-Version": result.audit.engine_version,
+            "X-PP-Engine-Version": PP_ENGINE_VERSION,
             "X-Input-Sha256": result.audit.input_sha256,
         },
     )
