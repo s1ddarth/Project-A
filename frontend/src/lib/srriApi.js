@@ -70,11 +70,17 @@ async function toError(response) {
   );
 }
 
-function buildForm({ header, file, frequency, dateFormat }) {
+function buildForm({ header, file, frequency, dateFormat, currency, referenceDate, hasCharges }) {
   const form = new FormData();
   form.append('header', JSON.stringify(header || {}));
   form.append('frequency', frequency || 'auto');
   form.append('date_format', dateFormat || 'dmy');
+  form.append('currency', currency || '');
+  // Empty means "derive from the last NAV observation" — the service must not
+  // fall back to today, or the same file would produce a different document
+  // next month.
+  form.append('reference_date', referenceDate || '');
+  form.append('has_entry_or_exit_charges', String(hasCharges !== false));
   if (file) form.append('file', file, file.name);
   return form;
 }
@@ -85,13 +91,15 @@ function buildForm({ header, file, frequency, dateFormat }) {
  * `file` is optional — omitting it checks the header form alone, which is how
  * the validation step behaves before a NAV file has been chosen.
  */
-export async function validateAndCalculate({ header, file, frequency, dateFormat, signal }) {
+export async function validateAndCalculate({
+  header, file, frequency, dateFormat, currency, referenceDate, hasCharges, signal,
+}) {
   requireBase();
   let response;
   try {
     response = await fetch(`${API_BASE}/v1/srri`, {
       method: 'POST',
-      body: buildForm({ header, file, frequency, dateFormat }),
+      body: buildForm({ header, file, frequency, dateFormat, currency, referenceDate, hasCharges }),
       signal,
     });
   } catch (cause) {
@@ -112,11 +120,16 @@ export async function validateAndCalculate({ header, file, frequency, dateFormat
  * by an id — the browser still holds it, and there is no server-side result to
  * go stale.
  */
-export async function downloadWorkbook({ file, frequency, dateFormat, filename }) {
+export async function downloadWorkbook({
+  file, frequency, dateFormat, currency, referenceDate, hasCharges, filename,
+}) {
   requireBase();
   const form = new FormData();
   form.append('frequency', frequency || 'auto');
   form.append('date_format', dateFormat || 'dmy');
+  form.append('currency', currency || '');
+  form.append('reference_date', referenceDate || '');
+  form.append('has_entry_or_exit_charges', String(hasCharges !== false));
   form.append('file', file, file.name);
 
   let response;

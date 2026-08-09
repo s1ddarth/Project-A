@@ -13,9 +13,16 @@ const NAVY = '#1E2A56';
 
 // Past-performance bar chart for the KIID preview: navy bars, -20..20 axis.
 export default function PerformanceChart({ years }) {
+  // A blank year keeps its axis label and draws no bar. Art. 15(3) requires the
+  // year to appear with its date and nothing else, so it must NOT be dropped
+  // from the series and must not be coerced to 0% — a 0% bar asserts a return
+  // of zero, which is a different statement from "no data".
   const data = (years || [])
     .filter((y) => y && (y.year || y.year === 0))
-    .map((y) => ({ name: String(y.year), value: Number(y.value) || 0 }));
+    .map((y) => ({
+      name: String(y.year),
+      value: y.isBlank || y.value == null || y.value === '' ? null : Number(y.value),
+    }));
 
   // Figures are engine-computed from the NAV file. Render the unresolved state
   // explicitly rather than an empty chart — an unpopulated document must be
