@@ -40,10 +40,10 @@ export default function DocumentPreviewPanel({ data }) {
   return (
     <section className="rounded-xl border bg-card shadow-sm overflow-hidden">
       <div className="border-b bg-muted/40 px-4 py-2.5">
-        <h2 className="text-sm font-semibold">Document preview</h2>
-        <p className="text-[11px] text-muted-foreground">
-          Rendered from the KIID template — what you see here is what prints.
-        </p>
+        <h2 className="text-sm font-semibold">Header and SRRI preview</h2>
+        {/* <p className="text-[11px] text-muted-foreground">
+          Header Preview.
+        </p> */}
       </div>
 
       <div className="kiid-doc bg-white p-4 space-y-4">
