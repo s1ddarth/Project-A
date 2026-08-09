@@ -16,7 +16,8 @@ COPY srri_engine/ ./srri_engine/
 COPY api/ ./api/
 
 # Fail the build rather than the first request if the engine regressed.
-RUN python srri_engine/test_srri_engine.py
+RUN python srri_engine/test_srri_engine.py \
+ && python srri_engine/test_box3_buffer.py
 
 RUN useradd --create-home --uid 10001 appuser
 USER appuser
