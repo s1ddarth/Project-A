@@ -1,12 +1,12 @@
 # Project Context — Regulatory Document SaaS
 
 **Handover document for a fresh Claude Code session.**
-Last updated: 7 August 2026. Repo: `github.com/s1ddarth/Project-A`
+Last updated: 9 August 2026. Repo: `github.com/s1ddarth/Project-A`
 
 Read this first, then the companion documents listed in §11. This file records both the
 current state of the code and the decisions already made, including several corrections
 to earlier assumptions. Where something is unresolved it is flagged explicitly in §10 —
-do not silently pick an answer to those.
+do not silently pick an answer to those. Decisions taken since handover are in §14.
 
 ---
 
@@ -201,7 +201,9 @@ Required changes, in the order they matter:
      format must be an explicit input.
    - `--min-weeks` allows generating an SRRI on under 5 years of data. In a multi-user
      web app this must be an admin-only override recorded with who approved it, not a
-     flag anyone can set.
+     flag anyone can set. **Done** — the engine requires a `MinPeriodsOverride`
+     carrying an approver and a reason, and the API deliberately does not expose it,
+     so there is no route to a sub-5-year SRRI through the product (see §14).
 9. **Return `engine_version` and a hash of the input file** so any published document
    traces back to exactly what produced it.
 
@@ -294,10 +296,7 @@ Recorded because they are easy to get wrong again:
 
 ## 10. Open questions — do not answer these unilaterally
 
-1. **Minimum history conflict.** The field schema spec cites minima of daily 2 years /
-   weekly 4 years / monthly 5 years. Both calculators hardcode a 5-year window (260
-   weeks, 60 months), and CESR Box 1 specifies 5 years. These disagree and the team must
-   decide which governs before validation rules are written.
+1. ~~**Minimum history conflict.**~~ **ANSWERED, 9 August 2026 — see §14.**
 2. **The full validation condition list** was never supplied. §8 above is a proposed
    structure, not the agreed rules.
 3. **Who approves and publishes a document**, and what the states are between draft and
@@ -343,3 +342,48 @@ Attach these alongside this file:
    and deploy it to Render (EU).
 5. Land the engine refactor (§6) behind golden tests.
 6. Swap the stub for the real engine.
+
+---
+
+## 14. Decisions taken since handover
+
+Recorded here so a resolved question is not reopened by accident. Each supersedes
+whatever the earlier sections or the spec documents say.
+
+### 14.1 Minimum NAV history — 5 years, hard stop (9 August 2026)
+
+**Decision.** A compliant SRRI requires **at least 5 years of NAV history,
+irrespective of the frequency of the data set** — daily, weekly or monthly. Less
+than 5 years is not accepted.
+
+This supersedes:
+
+- §10 open question 1, now closed.
+- **Field Schema Spec §5**, which cites minima of daily 2 years / weekly 4 years /
+  monthly 5 years. Those figures no longer apply; the spec document is stale on
+  this point.
+
+CESR Box 1 §4 governs, and both calculation bases already express the same
+5-year window — weekly `T=260` at `m=52`, monthly `T=60` at `m=12`.
+
+**Already implemented; no code change was required.** `validate()` raises a
+blocking `INSUFFICIENT_HISTORY` error whenever the usable returns on the
+calculation grid fall short of `T`. Verified end to end:
+
+| History supplied | Result |
+|---|---|
+| 3.0 years | `blocked` — `INSUFFICIENT_HISTORY`, no SRRI produced |
+| 4.5 years | `blocked` — `INSUFFICIENT_HISTORY`, no SRRI produced |
+| 6.0 years | `ok` — SRRI produced |
+
+**On the override.** The engine retains a `MinPeriodsOverride` that can relax the
+window, but it cannot be constructed without a named approver and a reason. The
+FastAPI service (PR #33, not yet merged) deliberately does **not** expose it, so
+once that lands there is no route to a sub-5-year SRRI through the product — the
+hard stop holds for every user, and the override stays reachable only from the
+library and CLI.
+
+**Open point:** whether the override should be removed from the engine outright.
+"Hard stop" as stated admits no exception, but an attributable, logged override is
+a different thing from a flag anyone can set. Left in place for now because
+nothing user-facing can reach it.
