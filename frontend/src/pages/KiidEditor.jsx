@@ -4,14 +4,17 @@ import { cn } from '@/lib/utils';
 import { printKiid, kiidPrintTitle } from '@/lib/printKiid';
 import KiidForm from '@/components/kiid/KiidForm';
 import KiidPreview from '@/components/kiid/KiidPreview';
+import WorkflowSplit from '@/components/workflow/WorkflowSplit';
+import WorkflowPanel from '@/components/workflow/WorkflowPanel';
 import './kiid-editor.css';
 
 // Controlled split-screen editor used as the final step of the KIID workflow.
 // The parent owns the document data and the workflow chrome; this component
 // owns preview status, the on-screen A4 page containers, and the print root.
-// The document is rendered as HTML+CSS (see KiidPreview + kiid-document.css).
-// Print uses an isolated iframe (see printKiid) to avoid Firefox/WebKit
-// overflow clipping.
+// Layout chrome (1:2 split + cards) is shared with Validation via WorkflowSplit /
+// WorkflowPanel. The document is rendered as HTML+CSS (see KiidPreview +
+// kiid-document.css). Print uses an isolated iframe (see printKiid) to avoid
+// Firefox/WebKit overflow clipping.
 function StatusIndicator({ status }) {
   const map = {
     updating: { label: 'Updating…', icon: Loader2, className: 'text-amber-600', spin: true },
@@ -142,38 +145,41 @@ export default function KiidEditor({ data, update, printRef }) {
 
   return (
     <div className="kiid-editor">
-      <div className="kiid-editor__body">
-        <div className="kiid-editor__form">
-          <div className="kiid-editor__form-inner">
+      <WorkflowSplit
+        left={
+          <div className="kiid-editor__form print:hidden">
             <div className="mb-4">
               <StatusIndicator status={status} />
             </div>
             <KiidForm data={data} update={update} />
-            <div className="h-12" />
           </div>
-        </div>
-        <div ref={previewPaneRef} className="kiid-editor__preview">
-          <div className="kiid-editor__preview-inner">
-            <OverflowIndicator overflow={overflow} />
-            <div
-              className="kiid-editor__preview-scale-shell"
-              style={{ height: scaleShellHeight || undefined }}
-            >
-              <div
-                className="kiid-editor__preview-scale"
-                style={{
-                  transform: `scale(${previewScale})`,
-                  width: '210mm',
-                }}
-              >
-                <div ref={previewRef} className="kiid-editor__print-root kiid-print-root">
-                  <KiidPreview data={data} />
+        }
+        right={
+          <WorkflowPanel title="Live preview" compact className="kiid-editor__preview-panel">
+            <div ref={previewPaneRef} className="kiid-editor__preview">
+              <div className="kiid-editor__preview-inner">
+                <OverflowIndicator overflow={overflow} />
+                <div
+                  className="kiid-editor__preview-scale-shell"
+                  style={{ height: scaleShellHeight || undefined }}
+                >
+                  <div
+                    className="kiid-editor__preview-scale"
+                    style={{
+                      transform: `scale(${previewScale})`,
+                      width: '210mm',
+                    }}
+                  >
+                    <div ref={previewRef} className="kiid-editor__print-root kiid-print-root">
+                      <KiidPreview data={data} />
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        </div>
-      </div>
+          </WorkflowPanel>
+        }
+      />
     </div>
   );
 }

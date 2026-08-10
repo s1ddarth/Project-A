@@ -21,6 +21,8 @@ import {
 import HeaderForm from '@/components/kiid/HeaderForm';
 import ValidationResults from '@/components/workflow/ValidationResults';
 import DocumentPreviewPanel from '@/components/workflow/DocumentPreviewPanel';
+import WorkflowSplit from '@/components/workflow/WorkflowSplit';
+import WorkflowPanel from '@/components/workflow/WorkflowPanel';
 
 /**
  * Prominent, full-width status strip.
@@ -165,226 +167,221 @@ export default function ValidationStep({
         awaitingFile={ran && navFindings === null}
       />
 
-      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
-        {/* ---------------- LEFT — inputs ---------------- */}
-        <div className="space-y-5 min-w-0">
-          <section className="rounded-xl border bg-card p-5 shadow-sm">
-            <h2 className="text-base font-semibold mb-1">Fund header</h2>
-            <p className="text-xs text-muted-foreground mb-4">
-              Enter the fund identification details. Header checks validate these fields; the NAV
-              file checks validate the uploaded spreadsheet.
-            </p>
-            <HeaderForm data={data} update={update} />
-          </section>
+      <WorkflowSplit
+        left={
+          <>
+            <WorkflowPanel
+              title="Fund header"
+              description="Enter the fund identification details. Header checks validate these fields; the NAV file checks validate the uploaded spreadsheet."
+            >
+              <HeaderForm data={data} update={update} />
+            </WorkflowPanel>
 
-          <section className="rounded-xl border bg-card p-5 shadow-sm">
-            <div className="flex items-start justify-between gap-4 mb-1">
-              <h2 className="text-base font-semibold">NAV file</h2>
-              <Button asChild variant="outline" size="sm" className="shrink-0">
-                {/* Stored under a URL-safe name; saved under the real one. */}
-                <a href="/nav-template.xlsx" download="NAV Request Template_V1.xlsx">
-                  <Download className="h-4 w-4 mr-1.5" /> Template
-                </a>
-              </Button>
-            </div>
-            <p className="text-xs text-muted-foreground mb-4">
-              Upload the Excel NAV history used to compute SRRI and past performance. Download the
-              template if you need the expected layout — fill in the header block and the
-              Date / NAV columns from row 8.
-            </p>
-            <label className="flex flex-col items-center justify-center gap-2 border-2 border-dashed rounded-lg p-8 cursor-pointer hover:bg-muted/40 transition">
-              <FileSpreadsheet className="h-8 w-8 text-muted-foreground" />
-              <span className="text-sm font-medium">
-                {navFile?.name || 'Click to select a NAV file'}
-              </span>
-              <span className="text-[11px] text-muted-foreground">.xlsx, .xls, .csv or .txt</span>
-              <input
-                type="file"
-                accept=".xlsx,.xls,.csv,.txt,.tsv"
-                className="hidden"
-                onChange={(e) => onNavFile(e.target.files?.[0] || null)}
-              />
-            </label>
-
-            <div className="grid grid-cols-2 gap-3 mt-4">
-              <div className="space-y-1">
-                <Label className="text-xs font-medium text-muted-foreground">Frequency</Label>
-                <Select value={frequency} onValueChange={onFrequencyChange}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {FREQUENCY_OPTIONS.map((o) => (
-                      <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs font-medium text-muted-foreground">Date format</Label>
-                <Select value={dateFormat} onValueChange={onDateFormatChange}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {DATE_FORMAT_OPTIONS.map((o) => (
-                      <SelectItem key={o.value} value={o.value}>
-                        {o.label} — {o.hint}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="space-y-1 mt-3">
-              <Label className="text-xs font-medium text-muted-foreground">
-                Reference date
-              </Label>
-              <Input
-                type="date"
-                value={referenceDate || ''}
-                onChange={(e) => onReferenceDateChange(e.target.value)}
-                className="max-w-[200px]"
-              />
-              {/* Deliberately NOT defaulted to today: the same file must produce
-                  the same document whenever it is re-run (rule 5). */}
-              <p className="text-[11px] text-muted-foreground">
-                Leave blank to use the last date in the NAV file. Governs which
-                calendar years appear in past performance.
-              </p>
-            </div>
-
-            {/* The engine cannot tell 03/04 apart on its own. Getting this wrong
-                produces a wrong SRRI with no other symptom, so it is an explicit
-                choice rather than a silent default. */}
-            <p className="text-[11px] text-muted-foreground mt-1.5">
-              Date format must match the file. A US-formatted file read as DMY produces a wrong
-              SRRI with no other warning.
-            </p>
-
-            <div className="flex items-center gap-2 mt-4 flex-wrap">
-              <Button onClick={onRunValidation} disabled={validating}>
-                {validating ? (
-                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                ) : (
-                  <ShieldCheck className="h-4 w-4 mr-1" />
-                )}
-                {validating ? 'Validating…' : 'Run validation'}
-              </Button>
-              {navFile && (
-                <Button variant="outline" onClick={getWorkbook} disabled={downloading}>
-                  {downloading ? (
-                    <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
-                  ) : (
-                    <Download className="h-4 w-4 mr-1.5" />
-                  )}
-                  Calculation workbook
+            <WorkflowPanel
+              title="NAV file"
+              description="Upload the Excel NAV history used to compute SRRI and past performance. Download the template if you need the expected layout — fill in the header block and the Date / NAV columns from row 8."
+              headerAside={
+                <Button asChild variant="outline" size="sm" className="shrink-0">
+                  {/* Stored under a URL-safe name; saved under the real one. */}
+                  <a href="/nav-template.xlsx" download="NAV Request Template_V1.xlsx">
+                    <Download className="h-4 w-4 mr-1.5" /> Template
+                  </a>
                 </Button>
-              )}
-            </div>
-            {workbookError && <p className="text-[11px] text-red-600 mt-2">{workbookError}</p>}
-            <p className="text-[11px] text-muted-foreground mt-2">
-              Header checks run on the form; NAV file checks require a file to be uploaded.
-            </p>
-          </section>
+              }
+            >
+              <label className="flex flex-col items-center justify-center gap-2 border-2 border-dashed rounded-lg p-8 cursor-pointer hover:bg-muted/40 transition">
+                <FileSpreadsheet className="h-8 w-8 text-muted-foreground" />
+                <span className="text-sm font-medium">
+                  {navFile?.name || 'Click to select a NAV file'}
+                </span>
+                <span className="text-[11px] text-muted-foreground">.xlsx, .xls, .csv or .txt</span>
+                <input
+                  type="file"
+                  accept=".xlsx,.xls,.csv,.txt,.tsv"
+                  className="hidden"
+                  onChange={(e) => onNavFile(e.target.files?.[0] || null)}
+                />
+              </label>
 
-          {showAck && (
-            <div className="flex items-start gap-3 p-3 rounded-lg bg-amber-50 border border-amber-200">
-              <Checkbox
-                checked={acknowledged}
-                onCheckedChange={setAcknowledged}
-                id="ack-warnings"
-                className="mt-0.5"
-              />
-              <Label htmlFor="ack-warnings" className="text-xs leading-relaxed text-amber-900">
-                I acknowledge the {totalWarnings} warning(s) above and accept the risk of proceeding
-                to the editor.
-              </Label>
-            </div>
-          )}
-        </div>
-
-        {/* ---------------- RIGHT — findings, then preview ---------------- */}
-        <div className="space-y-5 min-w-0 xl:sticky xl:top-4 xl:self-start xl:max-h-[calc(100vh-6rem)] xl:overflow-y-auto xl:pr-1">
-          <section className="rounded-xl border bg-card p-4 shadow-sm">
-            <h2 className="text-sm font-semibold mb-0.5">Header checks</h2>
-            <p className="text-[11px] text-muted-foreground mb-2.5">
-              ISIN format and check digit, currency consistency, required fields.
-            </p>
-            {ran ? (
-              <ValidationResults findings={headerFindings} />
-            ) : (
-              <p className="text-xs text-muted-foreground italic">Run validation to see results.</p>
-            )}
-          </section>
-
-          <section className="rounded-xl border bg-card p-4 shadow-sm">
-            <h2 className="text-sm font-semibold mb-0.5">NAV file checks</h2>
-            <p className="text-[11px] text-muted-foreground mb-2.5">
-              Date and price parsing, duplicates, gaps, stale prices, non-positive values, extreme
-              moves, coverage length.
-            </p>
-            {navFindings === null ? (
-              <p className="text-xs text-muted-foreground italic">
-                Upload a NAV file and run validation to see file checks.
-              </p>
-            ) : (
-              <ValidationResults findings={navFindings} />
-            )}
-          </section>
-
-          {disclosures?.length > 0 && (
-            <section className="rounded-xl border bg-card p-4 shadow-sm">
-              <h2 className="text-sm font-semibold mb-0.5">Required disclosures</h2>
-              {/* Art. 15(5). These are NOT in the calculation workbook by
-                  design — they must sit alongside the published chart, so the
-                  document layer takes them from the response. */}
-              <p className="text-[11px] text-muted-foreground mb-2.5">
-                Art. 15(5) — must appear alongside the past-performance chart.
-              </p>
-              <ul className="space-y-1.5">
-                {disclosures.map((d, i) => (
-                  <li key={i} className="text-[11px] leading-relaxed border-l-2 border-primary/30 pl-2">
-                    {d}
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )}
-
-          <DocumentPreviewPanel data={data} />
-
-          {/* Rule 5 — a published figure must be re-derivable. Everything needed
-              to reproduce this SRRI comes back with it, so show it rather than
-              discard it. */}
-          {audit && (
-            <section className="rounded-xl border bg-card p-4 shadow-sm">
-              <h2 className="text-sm font-semibold mb-0.5">Calculation provenance</h2>
-              <p className="text-[11px] text-muted-foreground mb-2.5">
-                Stored with the document so any figure can be re-derived.
-              </p>
-              <dl className="text-[11px] space-y-1">
-                {[
-                  ['Engine', `${audit.engine_name} ${audit.engine_version}`],
-                  ['Basis', `${audit.frequency} — m=${audit.m}, T=${audit.window}, ${audit.annualisation}`],
-                  ['Date format used', audit.date_format_resolved.toUpperCase()],
-                  ['Box 3 buffer', `${audit.buffer_months} months`],
-                  [
-                    'Minimum window',
-                    `${audit.min_periods}${audit.min_periods_is_regulatory_default ? ' (regulatory default)' : ' (OVERRIDDEN)'}`,
-                  ],
-                  ['Input file', audit.input_filename || '—'],
-                ].map(([k, v]) => (
-                  <div key={k} className="flex justify-between gap-3">
-                    <dt className="text-muted-foreground shrink-0">{k}</dt>
-                    <dd className="text-right font-medium min-w-0 break-words">{v}</dd>
-                  </div>
-                ))}
-                <div className="pt-1">
-                  <dt className="text-muted-foreground">Input SHA-256</dt>
-                  <dd className="font-mono text-[10px] break-all">{audit.input_sha256}</dd>
+              <div className="grid grid-cols-2 gap-3 mt-4">
+                <div className="space-y-1">
+                  <Label className="text-xs font-medium text-muted-foreground">Frequency</Label>
+                  <Select value={frequency} onValueChange={onFrequencyChange}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {FREQUENCY_OPTIONS.map((o) => (
+                        <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-              </dl>
-            </section>
-          )}
-        </div>
-      </div>
+                <div className="space-y-1">
+                  <Label className="text-xs font-medium text-muted-foreground">Date format</Label>
+                  <Select value={dateFormat} onValueChange={onDateFormatChange}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {DATE_FORMAT_OPTIONS.map((o) => (
+                        <SelectItem key={o.value} value={o.value}>
+                          {o.label} — {o.hint}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="space-y-1 mt-3">
+                <Label className="text-xs font-medium text-muted-foreground">
+                  Reference date
+                </Label>
+                <Input
+                  type="date"
+                  value={referenceDate || ''}
+                  onChange={(e) => onReferenceDateChange(e.target.value)}
+                  className="max-w-[200px]"
+                />
+                {/* Deliberately NOT defaulted to today: the same file must produce
+                    the same document whenever it is re-run (rule 5). */}
+                <p className="text-[11px] text-muted-foreground">
+                  Leave blank to use the last date in the NAV file. Governs which
+                  calendar years appear in past performance.
+                </p>
+              </div>
+
+              {/* The engine cannot tell 03/04 apart on its own. Getting this wrong
+                  produces a wrong SRRI with no other symptom, so it is an explicit
+                  choice rather than a silent default. */}
+              <p className="text-[11px] text-muted-foreground mt-1.5">
+                Date format must match the file. A US-formatted file read as DMY produces a wrong
+                SRRI with no other warning.
+              </p>
+
+              <div className="flex items-center gap-2 mt-4 flex-wrap">
+                <Button onClick={onRunValidation} disabled={validating}>
+                  {validating ? (
+                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                  ) : (
+                    <ShieldCheck className="h-4 w-4 mr-1" />
+                  )}
+                  {validating ? 'Validating…' : 'Run validation'}
+                </Button>
+                {navFile && (
+                  <Button variant="outline" onClick={getWorkbook} disabled={downloading}>
+                    {downloading ? (
+                      <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+                    ) : (
+                      <Download className="h-4 w-4 mr-1.5" />
+                    )}
+                    Calculation workbook
+                  </Button>
+                )}
+              </div>
+              {workbookError && <p className="text-[11px] text-red-600 mt-2">{workbookError}</p>}
+              <p className="text-[11px] text-muted-foreground mt-2">
+                Header checks run on the form; NAV file checks require a file to be uploaded.
+              </p>
+            </WorkflowPanel>
+
+            {showAck && (
+              <div className="flex items-start gap-3 p-3 rounded-lg bg-amber-50 border border-amber-200">
+                <Checkbox
+                  checked={acknowledged}
+                  onCheckedChange={setAcknowledged}
+                  id="ack-warnings"
+                  className="mt-0.5"
+                />
+                <Label htmlFor="ack-warnings" className="text-xs leading-relaxed text-amber-900">
+                  I acknowledge the {totalWarnings} warning(s) above and accept the risk of proceeding
+                  to the editor.
+                </Label>
+              </div>
+            )}
+          </>
+        }
+        right={
+          <>
+            <WorkflowPanel
+              compact
+              title="Header checks"
+              description="ISIN format and check digit, currency consistency, required fields."
+            >
+              {ran ? (
+                <ValidationResults findings={headerFindings} />
+              ) : (
+                <p className="text-xs text-muted-foreground italic">Run validation to see results.</p>
+              )}
+            </WorkflowPanel>
+
+            <WorkflowPanel
+              compact
+              title="NAV file checks"
+              description="Date and price parsing, duplicates, gaps, stale prices, non-positive values, extreme moves, coverage length."
+            >
+              {navFindings === null ? (
+                <p className="text-xs text-muted-foreground italic">
+                  Upload a NAV file and run validation to see file checks.
+                </p>
+              ) : (
+                <ValidationResults findings={navFindings} />
+              )}
+            </WorkflowPanel>
+
+            {disclosures?.length > 0 && (
+              <WorkflowPanel
+                compact
+                title="Required disclosures"
+                description="Art. 15(5) — must appear alongside the past-performance chart."
+              >
+                {/* Art. 15(5). These are NOT in the calculation workbook by
+                    design — they must sit alongside the published chart, so the
+                    document layer takes them from the response. */}
+                <ul className="space-y-1.5">
+                  {disclosures.map((d, i) => (
+                    <li key={i} className="text-[11px] leading-relaxed border-l-2 border-primary/30 pl-2">
+                      {d}
+                    </li>
+                  ))}
+                </ul>
+              </WorkflowPanel>
+            )}
+
+            <DocumentPreviewPanel data={data} />
+
+            {/* Rule 5 — a published figure must be re-derivable. Everything needed
+                to reproduce this SRRI comes back with it, so show it rather than
+                discard it. */}
+            {audit && (
+              <WorkflowPanel
+                compact
+                title="Calculation provenance"
+                description="Stored with the document so any figure can be re-derived."
+              >
+                <dl className="text-[11px] space-y-1">
+                  {[
+                    ['Engine', `${audit.engine_name} ${audit.engine_version}`],
+                    ['Basis', `${audit.frequency} — m=${audit.m}, T=${audit.window}, ${audit.annualisation}`],
+                    ['Date format used', audit.date_format_resolved.toUpperCase()],
+                    ['Box 3 buffer', `${audit.buffer_months} months`],
+                    [
+                      'Minimum window',
+                      `${audit.min_periods}${audit.min_periods_is_regulatory_default ? ' (regulatory default)' : ' (OVERRIDDEN)'}`,
+                    ],
+                    ['Input file', audit.input_filename || '—'],
+                  ].map(([k, v]) => (
+                    <div key={k} className="flex justify-between gap-3">
+                      <dt className="text-muted-foreground shrink-0">{k}</dt>
+                      <dd className="text-right font-medium min-w-0 break-words">{v}</dd>
+                    </div>
+                  ))}
+                  <div className="pt-1">
+                    <dt className="text-muted-foreground">Input SHA-256</dt>
+                    <dd className="font-mono text-[10px] break-all">{audit.input_sha256}</dd>
+                  </div>
+                </dl>
+              </WorkflowPanel>
+            )}
+          </>
+        }
+      />
     </div>
   );
 }

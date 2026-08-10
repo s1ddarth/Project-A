@@ -186,39 +186,40 @@ export default function KiidWorkflow() {
         <WorkflowStepper steps={STEPS} current={step} onStepClick={(i) => setStep(i)} />
       </div>
 
-      <div className={cn('flex-1 px-5 min-h-0', step === 3 ? 'overflow-hidden' : 'overflow-y-auto')}>
-        {step === 3 ? (
-          <KiidEditor printRef={editorRef} data={data} update={update} />
-        ) : (
-          /* The validation step runs a two-column layout, so it needs the full
-             width; the picker steps stay narrow and centred. */
-          <div className={cn('mx-auto p-6', step === 2 ? 'max-w-[1500px]' : 'max-w-3xl')}>
-            {step === 0 && <ProductPicker value={product} onChange={setProduct} />}
-            {step === 1 && <ProductionMode value={mode} onChange={setMode} />}
-            {step === 2 && (
-              <ValidationStep
-                data={data}
-                update={update}
-                navFile={navFile}
-                onNavFile={onNavFile}
-                frequency={frequency}
-                onFrequencyChange={setFrequency}
-                dateFormat={dateFormat}
-                onDateFormatChange={setDateFormat}
-                referenceDate={referenceDate}
-                onReferenceDateChange={setReferenceDate}
-                disclosures={disclosures}
-                headerFindings={headerFindings}
-                navFindings={navFindings}
-                validating={validating}
-                onRunValidation={runValidation}
-                acknowledged={acknowledged}
-                setAcknowledged={setAcknowledged}
-                audit={audit}
-              />
-            )}
-          </div>
-        )}
+      <div className="flex-1 px-5 min-h-0 overflow-y-auto">
+        {/* Validation and Editor share the wide two-column shell; picker steps stay narrow. */}
+        <div
+          className={cn(
+            'mx-auto p-6',
+            step === 2 || step === 3 ? 'max-w-[1500px]' : 'max-w-3xl'
+          )}
+        >
+          {step === 0 && <ProductPicker value={product} onChange={setProduct} />}
+          {step === 1 && <ProductionMode value={mode} onChange={setMode} />}
+          {step === 2 && (
+            <ValidationStep
+              data={data}
+              update={update}
+              navFile={navFile}
+              onNavFile={onNavFile}
+              frequency={frequency}
+              onFrequencyChange={setFrequency}
+              dateFormat={dateFormat}
+              onDateFormatChange={setDateFormat}
+              referenceDate={referenceDate}
+              onReferenceDateChange={setReferenceDate}
+              disclosures={disclosures}
+              headerFindings={headerFindings}
+              navFindings={navFindings}
+              validating={validating}
+              onRunValidation={runValidation}
+              acknowledged={acknowledged}
+              setAcknowledged={setAcknowledged}
+              audit={audit}
+            />
+          )}
+          {step === 3 && <KiidEditor printRef={editorRef} data={data} update={update} />}
+        </div>
       </div>
 
       <footer className="flex items-center justify-between gap-4 px-5 h-16 border-t bg-card shrink-0">
