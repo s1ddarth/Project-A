@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { useId } from 'react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { ACC_DIS_OPTIONS } from '@/lib/kiidData';
 
 function Field({ label, children }) {
@@ -17,6 +17,8 @@ function Field({ label, children }) {
 // Fund identification + regulatory fields. Used on the validation step so the
 // header can be validated against the uploaded NAV file before editing begins.
 export default function HeaderForm({ data, update }) {
+  const accDisId = useId();
+
   return (
     <div className="space-y-5">
       <div>
@@ -45,21 +47,24 @@ export default function HeaderForm({ data, update }) {
           <Field label="SC Letter">
             <Input value={data.scLetter} onChange={(e) => update('scLetter', e.target.value)} />
           </Field>
-          <Field label="Acc / Dis">
-            <ToggleGroup
-              type="single"
+          <Field label="Accumulating / Distributing">
+            <RadioGroup
               value={data.accDis || ''}
-              onValueChange={(v) => v && update('accDis', v)}
-              size="sm"
-              variant="outline"
-              className="justify-start"
+              onValueChange={(v) => update('accDis', v)}
+              className="flex flex-wrap gap-x-4 gap-y-2 pt-1"
             >
-              {ACC_DIS_OPTIONS.map((opt) => (
-                <ToggleGroupItem key={opt} value={opt} aria-label={opt} className="px-3">
-                  {opt}
-                </ToggleGroupItem>
-              ))}
-            </ToggleGroup>
+              {ACC_DIS_OPTIONS.map((opt) => {
+                const id = `${accDisId}-${opt}`;
+                return (
+                  <div key={opt} className="flex items-center gap-2">
+                    <RadioGroupItem value={opt} id={id} />
+                    <Label htmlFor={id} className="text-xs font-normal">
+                      {opt}
+                    </Label>
+                  </div>
+                );
+              })}
+            </RadioGroup>
           </Field>
           <div className="flex items-center gap-2 pt-6">
             <Switch checked={data.hedged} onCheckedChange={(v) => update('hedged', v)} id="hdr-hedged" />
