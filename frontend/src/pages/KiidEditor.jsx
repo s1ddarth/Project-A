@@ -148,9 +148,9 @@ export default function KiidEditor({ data, update, printRef }) {
       <WorkflowSplit
         left={
           <div className="kiid-editor__form print:hidden">
-            <div className="mb-4">
+            {/* <div className="mb-4">
               <StatusIndicator status={status} />
-            </div>
+            </div> */}
             <KiidForm data={data} update={update} />
           </div>
         }
