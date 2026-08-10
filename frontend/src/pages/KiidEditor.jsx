@@ -1,6 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Printer, Loader2, CheckCircle2, AlertCircle, ArrowLeft, RotateCcw } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { useState, useEffect, useRef } from 'react';
+import { Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { printKiid, kiidPrintTitle } from '@/lib/printKiid';
 import KiidForm from '@/components/kiid/KiidForm';
@@ -8,10 +7,11 @@ import KiidPreview from '@/components/kiid/KiidPreview';
 import './kiid-editor.css';
 
 // Controlled split-screen editor used as the final step of the KIID workflow.
-// The parent owns the document data; this component owns preview status, the
-// on-screen A4 page containers, and the print/export action. The document is
-// rendered as HTML+CSS (see KiidPreview + kiid-document.css). Print uses an
-// isolated iframe (see printKiid) to avoid Firefox/WebKit overflow clipping.
+// The parent owns the document data and the workflow chrome; this component
+// owns preview status, the on-screen A4 page containers, and the print root.
+// The document is rendered as HTML+CSS (see KiidPreview + kiid-document.css).
+// Print uses an isolated iframe (see printKiid) to avoid Firefox/WebKit
+// overflow clipping.
 function StatusIndicator({ status }) {
   const map = {
     updating: { label: 'Updating…', icon: Loader2, className: 'text-amber-600', spin: true },
@@ -68,7 +68,14 @@ function OverflowIndicator({ overflow }) {
   );
 }
 
-export default function KiidEditor({ data, update, onBack, onReset }) {
+/**
+ * @param {{
+ *   data: Record<string, unknown>,
+ *   update: (field: string, value: unknown) => void,
+ *   printRef?: { current: { print: () => void } | null },
+ * }} props
+ */
+export default function KiidEditor({ data, update, printRef }) {
   const [status, setStatus] = useState('up-to-date');
   const [overflow, setOverflow] = useState({ pages: [0, 0] });
   const [previewScale, setPreviewScale] = useState(1);
@@ -119,46 +126,28 @@ export default function KiidEditor({ data, update, onBack, onReset }) {
     return () => ro.disconnect();
   }, [JSON.stringify(data)]);
 
-  const handlePrint = () => {
-    // Clone the unscaled print root — scale wrapper is a sibling ancestor only.
-    printKiid(previewRef.current, { title: kiidPrintTitle(data) });
-  };
+  // Expose print to the workflow footer without a second app header.
+  useEffect(() => {
+    if (!printRef) return undefined;
+    printRef.current = {
+      print: () => {
+        // Clone the unscaled print root — scale wrapper is a sibling ancestor only.
+        printKiid(previewRef.current, { title: kiidPrintTitle(data) });
+      },
+    };
+    return () => {
+      printRef.current = null;
+    };
+  }, [printRef, data]);
 
   return (
     <div className="kiid-editor">
-      <header className="kiid-editor__header">
-        <div className="flex items-center gap-3 min-w-0">
-          {onBack && (
-            <Button variant="ghost" size="sm" onClick={onBack}>
-              <ArrowLeft className="h-4 w-4 mr-1" /> Back
-            </Button>
-          )}
-          <div className="h-7 w-7 rounded-md bg-primary flex items-center justify-center text-primary-foreground font-bold text-sm shrink-0">
-            K
-          </div>
-          <div className="min-w-0">
-            <h1 className="text-sm font-semibold leading-tight truncate">KIID Editor</h1>
-            <p className="text-[11px] text-muted-foreground leading-tight truncate">
-              {data.subFundName || 'Untitled fund'} · {data.isin || 'no ISIN'}
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center gap-4">
-          <StatusIndicator status={status} />
-          {onReset && (
-            <Button variant="ghost" size="sm" onClick={onReset} title="Reset to sample data">
-              <RotateCcw className="h-4 w-4 mr-1" /> Reset
-            </Button>
-          )}
-          <Button size="sm" onClick={handlePrint}>
-            <Printer className="h-4 w-4 mr-1" /> Print / Save as PDF
-          </Button>
-        </div>
-      </header>
-
       <div className="kiid-editor__body">
         <div className="kiid-editor__form">
           <div className="kiid-editor__form-inner">
+            <div className="mb-4">
+              <StatusIndicator status={status} />
+            </div>
             <KiidForm data={data} update={update} />
             <div className="h-12" />
           </div>

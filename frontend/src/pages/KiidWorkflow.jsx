@@ -1,5 +1,5 @@
-import React, { useState, useCallback } from 'react';
-import { ArrowLeft, ArrowRight } from 'lucide-react';
+import React, { useState, useCallback, useRef } from 'react';
+import { ArrowLeft, ArrowRight, Printer, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import WorkflowStepper from '@/components/workflow/WorkflowStepper';
 import ProductPicker from '@/components/workflow/ProductPicker';
@@ -66,6 +66,7 @@ export default function KiidWorkflow() {
   const [referenceDate, setReferenceDate] = useState('');
   const [audit, setAudit] = useState(null);
   const [disclosures, setDisclosures] = useState([]);
+  const editorRef = useRef(/** @type {{ print: () => void } | null } */ (null));
 
   const update = useCallback((field, value) => {
     setData((prev) => ({ ...prev, [field]: value }));
@@ -149,12 +150,6 @@ export default function KiidWorkflow() {
     errors.length === 0 &&
     (warnings.length === 0 || acknowledged);
 
-  // The editor step takes over the full screen with its own header (preview +
-  // download), so it is rendered outside the stepper shell.
-  if (step === 3) {
-    return <KiidEditor data={data} update={update} onBack={() => setStep(2)} onReset={reset} />;
-  }
-
   return (
     <div className="h-full flex flex-col bg-background">
       <header className="grid grid-cols-3 items-center gap-4 px-5 h-14 border-b bg-card shrink-0">
@@ -173,42 +168,61 @@ export default function KiidWorkflow() {
           <h1 className="text-sm font-semibold">KIID Generator</h1>
         </div>
 
-        <div />
+        <div className="flex items-center justify-end gap-2">
+          {step === 3 && (
+            <>
+              <Button variant="ghost" size="sm" onClick={reset} title="Reset to sample data">
+                <RotateCcw className="h-4 w-4 mr-1" /> Reset
+              </Button>
+              <Button size="sm" onClick={() => editorRef.current?.print()}>
+                <Printer className="h-4 w-4 mr-1" /> Print / Save as PDF
+              </Button>
+            </>
+          )}
+        </div>
       </header>
 
-      <div className="px-5 pt-4 shrink-0">
+      <div className="px-5 py-4 shrink-0">
         <WorkflowStepper steps={STEPS} current={step} onStepClick={(i) => setStep(i)} />
       </div>
 
-      <div className="flex-1 overflow-y-auto">
-        {/* The validation step runs a two-column layout, so it needs the full
-            width; the picker steps stay narrow and centred. */}
-        <div className={cn('mx-auto p-6', step === 2 ? 'max-w-[1500px]' : 'max-w-3xl')}>
-          {step === 0 && <ProductPicker value={product} onChange={setProduct} />}
-          {step === 1 && <ProductionMode value={mode} onChange={setMode} />}
-          {step === 2 && (
-            <ValidationStep
-              data={data}
-              update={update}
-              navFile={navFile}
-              onNavFile={onNavFile}
-              frequency={frequency}
-              onFrequencyChange={setFrequency}
-              dateFormat={dateFormat}
-              onDateFormatChange={setDateFormat}
-              referenceDate={referenceDate}
-              onReferenceDateChange={setReferenceDate}
-              disclosures={disclosures}
-              headerFindings={headerFindings}
-              navFindings={navFindings}
-              validating={validating}
-              onRunValidation={runValidation}
-              acknowledged={acknowledged}
-              setAcknowledged={setAcknowledged}
-              audit={audit}
-            />
-          )}
-        </div>
+      <div className={cn(
+        'flex-1 mx-5 min-h-0 rounded-2xl border border-border',
+        step === 3 ? 'overflow-hidden' : 'overflow-y-auto'
+      )}>
+ 
+        {step === 3 ? (
+          <KiidEditor printRef={editorRef} data={data} update={update} />
+        ) : (
+          /* The validation step runs a two-column layout, so it needs the full
+             width; the picker steps stay narrow and centred. */
+          <div className={cn('mx-auto p-6', step === 2 ? 'max-w-[1500px]' : 'max-w-3xl')}>
+            {step === 0 && <ProductPicker value={product} onChange={setProduct} />}
+            {step === 1 && <ProductionMode value={mode} onChange={setMode} />}
+            {step === 2 && (
+              <ValidationStep
+                data={data}
+                update={update}
+                navFile={navFile}
+                onNavFile={onNavFile}
+                frequency={frequency}
+                onFrequencyChange={setFrequency}
+                dateFormat={dateFormat}
+                onDateFormatChange={setDateFormat}
+                referenceDate={referenceDate}
+                onReferenceDateChange={setReferenceDate}
+                disclosures={disclosures}
+                headerFindings={headerFindings}
+                navFindings={navFindings}
+                validating={validating}
+                onRunValidation={runValidation}
+                acknowledged={acknowledged}
+                setAcknowledged={setAcknowledged}
+                audit={audit}
+              />
+            )}
+          </div>
+        )}
       </div>
 
       <footer className="flex items-center justify-between gap-4 px-5 h-16 border-t bg-card shrink-0">
@@ -219,6 +233,7 @@ export default function KiidWorkflow() {
           {step === 2 &&
             headerFindings !== null &&
             `${errors.length} error(s), ${warnings.length} warning(s).`}
+          {step === 3 && 'Edit narrative sections and check the live 2-page preview.'}
         </div>
         <div className="flex items-center gap-2">
           {step < 2 && (
