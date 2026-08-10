@@ -186,11 +186,7 @@ export default function KiidWorkflow() {
         <WorkflowStepper steps={STEPS} current={step} onStepClick={(i) => setStep(i)} />
       </div>
 
-      <div className={cn(
-        'flex-1 mx-5 min-h-0 rounded-2xl border border-border',
-        step === 3 ? 'overflow-hidden' : 'overflow-y-auto'
-      )}>
- 
+      <div className={cn('flex-1 px-5 min-h-0', step === 3 ? 'overflow-hidden' : 'overflow-y-auto')}>
         {step === 3 ? (
           <KiidEditor printRef={editorRef} data={data} update={update} />
         ) : (

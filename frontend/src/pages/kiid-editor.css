@@ -8,18 +8,16 @@
 
 .kiid-editor__body {
   flex: 1;
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
   min-height: 0;
 }
 
 .kiid-editor__form {
-  width: 42%;
-  min-width: 18rem;
-  max-width: 32rem;
+  min-width: 0;
   overflow-y: auto;
   border-right: 1px solid hsl(var(--border));
   background: hsl(var(--muted) / 0.2);
-  flex-shrink: 0;
 }
 
 .kiid-editor__form-inner {
