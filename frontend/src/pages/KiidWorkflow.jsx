@@ -186,12 +186,22 @@ export default function KiidWorkflow() {
         <WorkflowStepper steps={STEPS} current={step} onStepClick={(i) => setStep(i)} />
       </div>
 
-      <div className="flex-1 px-5 min-h-0 overflow-y-auto">
+      <div
+        className={cn(
+          'flex-1 px-5 min-h-0',
+          // Split steps fill height so columns scroll independently; otherwise page scrolls.
+          step === 2 || step === 3
+            ? 'overflow-hidden max-xl:overflow-y-auto'
+            : 'overflow-y-auto'
+        )}
+      >
         {/* Validation and Editor share the wide two-column shell; picker steps stay narrow. */}
         <div
           className={cn(
             'mx-auto p-6',
-            step === 2 || step === 3 ? 'max-w-[1500px]' : 'max-w-3xl'
+            step === 2 || step === 3
+              ? 'max-w-[1500px] xl:h-full xl:min-h-0 xl:flex xl:flex-col'
+              : 'max-w-3xl'
           )}
         >
           {step === 0 && <ProductPicker value={product} onChange={setProduct} />}

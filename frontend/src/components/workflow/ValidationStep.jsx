@@ -159,15 +159,18 @@ export default function ValidationStep({
   const showAck = ran && totalErrors === 0 && totalWarnings > 0;
 
   return (
-    <div className="space-y-4">
-      <StatusBanner
-        ran={ran}
-        errors={totalErrors}
-        warnings={totalWarnings}
-        awaitingFile={ran && navFindings === null}
-      />
+    <div className="space-y-4 xl:h-full xl:min-h-0 xl:flex xl:flex-col">
+      <div className="shrink-0">
+        <StatusBanner
+          ran={ran}
+          errors={totalErrors}
+          warnings={totalWarnings}
+          awaitingFile={ran && navFindings === null}
+        />
+      </div>
 
       <WorkflowSplit
+        className="xl:flex-1 xl:min-h-0"
         left={
           <>
             <WorkflowPanel

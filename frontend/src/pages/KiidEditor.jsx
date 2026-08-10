@@ -144,8 +144,9 @@ export default function KiidEditor({ data, update, printRef }) {
   }, [printRef, data]);
 
   return (
-    <div className="kiid-editor">
+    <div className="kiid-editor xl:h-full xl:min-h-0">
       <WorkflowSplit
+        className="xl:h-full"
         left={
           <div className="kiid-editor__form print:hidden">
             {/* <div className="mb-4">
