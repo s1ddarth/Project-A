@@ -3,10 +3,9 @@ import React from 'react';
 /**
  * The KIID document header — brand block plus fund identification.
  *
- * Extracted from KiidPreview so the validation step can preview the *real*
- * header rather than a second copy of it. One definition, two callers: rule 1
- * (one render path) means a change here shows up identically on the validation
- * page, in the editor preview and in the exported PDF.
+ * Extracted so header markup has one definition. Rendered via KiidPreview on
+ * both the validation and editor steps (rule 1 — one render path), so a change
+ * here shows up identically in validation, the editor preview and the PDF.
  *
  * The brand is currently hardcoded to EPIC. When client onboarding lands it
  * becomes a per-organisation logo; keeping it in one component is what makes
