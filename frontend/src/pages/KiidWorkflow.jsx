@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef } from 'react';
-import { ArrowLeft, ArrowRight, Printer, RotateCcw } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Download, Loader2, Printer, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import WorkflowStepper from '@/components/workflow/WorkflowStepper';
 import ProductPicker from '@/components/workflow/ProductPicker';
@@ -8,7 +8,7 @@ import ValidationStep from '@/components/workflow/ValidationStep';
 import KiidEditor from '@/pages/KiidEditor';
 import { defaultData, sampleData } from '@/lib/kiidData';
 import { cn } from '@/lib/utils';
-import { validateAndCalculate } from '@/lib/srriApi';
+import { downloadWorkbook, validateAndCalculate } from '@/lib/srriApi';
 
 const STEPS = ['Product', 'Production', 'Validation', 'Editor'];
 // v2: srriCategory/srriLabel/performanceYears became engine-computed and start
@@ -66,6 +66,8 @@ export default function KiidWorkflow() {
   const [referenceDate, setReferenceDate] = useState('');
   const [audit, setAudit] = useState(null);
   const [disclosures, setDisclosures] = useState([]);
+  const [downloadingWorkbook, setDownloadingWorkbook] = useState(false);
+  const [workbookError, setWorkbookError] = useState('');
   const editorRef = useRef(/** @type {{ print: () => void } | null } */ (null));
 
   const update = useCallback((field, value) => {
@@ -80,6 +82,7 @@ export default function KiidWorkflow() {
     setAcknowledged(false);
     setAudit(null);
     setDisclosures([]);
+    setWorkbookError('');
     setData((prev) => ({
       ...prev, srriCategory: '', srriLabel: '', performanceYears: [],
     }));
@@ -139,6 +142,27 @@ export default function KiidWorkflow() {
 
   const reset = () => setData({ ...defaultData, ...sampleData });
 
+  const getWorkbook = async () => {
+    if (!navFile) return;
+    setWorkbookError('');
+    setDownloadingWorkbook(true);
+    try {
+      await downloadWorkbook({
+        file: navFile,
+        frequency,
+        dateFormat,
+        currency: data.shareClassBaseCurrency,
+        referenceDate,
+        hasCharges: Number(data.entryCost) > 0 || Number(data.exitCost) > 0,
+        filename: `${(navFile.name || 'nav').replace(/\.[^.]+$/, '')}-srri-calculation.xlsx`,
+      });
+    } catch (err) {
+      setWorkbookError(err.message);
+    } finally {
+      setDownloadingWorkbook(false);
+    }
+  };
+
   const allFindings = [...(headerFindings || []), ...(navFindings || [])];
   const errors = allFindings.filter((f) => f.severity === 'error');
   const warnings = allFindings.filter((f) => f.severity === 'warning');
@@ -173,6 +197,25 @@ export default function KiidWorkflow() {
             <>
               <Button variant="ghost" size="sm" onClick={reset} title="Reset to sample data">
                 <RotateCcw className="h-4 w-4 mr-1" /> Reset
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={getWorkbook}
+                disabled={downloadingWorkbook || !navFile}
+                title={
+                  workbookError ||
+                  (!navFile
+                    ? 'Upload a NAV file in Validation to download the workbook'
+                    : 'Download the SRRI calculation workbook')
+                }
+              >
+                {downloadingWorkbook ? (
+                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                ) : (
+                  <Download className="h-4 w-4 mr-1" />
+                )}
+                Calculation workbook
               </Button>
               <Button size="sm" onClick={() => editorRef.current?.print()}>
                 <Printer className="h-4 w-4 mr-1" /> Print / Save as PDF
@@ -233,14 +276,15 @@ export default function KiidWorkflow() {
       </div>
 
       <footer className="flex items-center justify-between gap-4 px-5 h-16 border-t bg-card shrink-0">
-        <div className="text-xs text-muted-foreground">
+        <div className={cn('text-xs', workbookError && step === 3 ? 'text-red-600' : 'text-muted-foreground')}>
           {step === 0 && 'Select a document type to begin.'}
           {step === 1 && 'Choose how you want to produce documents.'}
           {step === 2 && headerFindings === null && 'Upload a NAV file and run validation.'}
           {step === 2 &&
             headerFindings !== null &&
             `${errors.length} error(s), ${warnings.length} warning(s).`}
-          {step === 3 && 'Edit narrative sections and check the live 2-page preview.'}
+          {step === 3 &&
+            (workbookError || 'Edit narrative sections and check the live 2-page preview.')}
         </div>
         <div className="flex items-center gap-2">
           {step < 2 && (
