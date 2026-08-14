@@ -54,15 +54,73 @@ function Divider() {
   return <hr className="kiid-divider" />;
 }
 
-export default function KiidPreview({ data }) {
+/** SRRI scale + axis labels — shared width/layout with the full document. */
+function RiskScaleBlock({ srriCategory }) {
+  return (
+    <>
+      <div className="kiid-risk-labels">
+        <span>Lower risk</span>
+        <span>Higher risk</span>
+      </div>
+      <div className="kiid-risk-labels">
+        <span>Potentially lower reward</span>
+        <span>Potentially higher reward</span>
+      </div>
+      <SrriScale srriCategory={srriCategory} />
+    </>
+  );
+}
+
+/**
+ * @param {{
+ *   data?: Record<string, unknown>,
+ *   variant?: 'full' | 'validation',
+ * }} props
+ *
+ * `validation` — header, SRRI scale and past-performance chart only (step 3).
+ * Same A4 geometry and shared blocks as `full`; narrative sections stay in the editor.
+ */
+export default function KiidPreview({ data, variant = 'full' }) {
   const d = data || {};
   const additional = filterBullets(d.additionalInfoBullets);
+  const validation = variant === 'validation';
+
+  if (validation) {
+    return (
+      <div className="kiid-doc">
+        <Page>
+          <KiidHeaderBlock data={d} />
+
+          <div className="kiid-section">
+            <div className="kiid-section-title">RISK AND REWARD PROFILE</div>
+            <Divider />
+            {/* Keep the document column width so the scale matches the editor. */}
+            <div className="kiid-split">
+              <div className="kiid-split__left">
+                <RiskScaleBlock srriCategory={d.srriCategory} />
+              </div>
+            </div>
+          </div>
+
+          <div className="kiid-section">
+            <div className="kiid-section-title">PAST PERFORMANCE</div>
+            <Divider />
+            <div className="kiid-split">
+              <div className="kiid-split__left--wide">
+                <KiidPastPerformanceBlock data={d} />
+              </div>
+            </div>
+          </div>
+        </Page>
+      </div>
+    );
+  }
 
   return (
     <div className="kiid-doc">
       {/* ---------- PAGE 1 ---------- */}
       <Page>
-{/* Brand is hardcoded to EPIC; becomes a per-org logo at onboarding. */}
+        {/* Brand is hardcoded to EPIC; becomes a per-org logo at onboarding. */}
         <KiidHeaderBlock data={d} />
 
         <div className="kiid-doc-title">Key Investor Information</div>
@@ -99,16 +157,7 @@ export default function KiidPreview({ data }) {
           <Divider />
           <div className="kiid-split">
             <div className="kiid-split__left">
-              <div className="kiid-risk-labels">
-                <span>Lower risk</span>
-                <span>Higher risk</span>
-              </div>
-              <div className="kiid-risk-labels">
-                <span>Potentially lower reward</span>
-                <span>Potentially higher reward</span>
-              </div>
-              {/* TODO: This needs to be computed from the Python script, and attached as an image */}
-              <SrriScale srriCategory={d.srriCategory} />
+              <RiskScaleBlock srriCategory={d.srriCategory} />
               <p className="kiid-p kiid-p--sm kiid-p--tight">
                 The Fund is in category {d.srriCategory || '\u00A0'} as assets it holds have
                 historically been subject to higher levels of price fluctuation. The category shown
@@ -184,7 +233,7 @@ export default function KiidPreview({ data }) {
           </div>
         </div>
 
-{/* Section: Past performance */}
+        {/* Section: Past performance */}
         <div className="kiid-section">
           <div className="kiid-section-title">
             PAST PERFORMANCE
@@ -211,9 +260,6 @@ export default function KiidPreview({ data }) {
 
         {additional.length > 0 && (
           <div className="kiid-section">
-            {/* <div className="kiid-section-title">
-              ADDITIONAL INFORMATION
-            </div> */}
             <Bullets items={additional} columns={2} size="10" />
           </div>
         )}

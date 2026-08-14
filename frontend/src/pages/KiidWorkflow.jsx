@@ -1,5 +1,5 @@
-import React, { useState, useCallback } from 'react';
-import { ArrowLeft, ArrowRight } from 'lucide-react';
+import React, { useState, useCallback, useRef } from 'react';
+import { ArrowLeft, ArrowRight, Download, Loader2, Printer, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import WorkflowStepper from '@/components/workflow/WorkflowStepper';
 import ProductPicker from '@/components/workflow/ProductPicker';
@@ -8,7 +8,7 @@ import ValidationStep from '@/components/workflow/ValidationStep';
 import KiidEditor from '@/pages/KiidEditor';
 import { defaultData, sampleData } from '@/lib/kiidData';
 import { cn } from '@/lib/utils';
-import { validateAndCalculate } from '@/lib/srriApi';
+import { downloadWorkbook, validateAndCalculate } from '@/lib/srriApi';
 
 const STEPS = ['Product', 'Production', 'Validation', 'Editor'];
 // v2: srriCategory/srriLabel/performanceYears became engine-computed and start
@@ -66,6 +66,9 @@ export default function KiidWorkflow() {
   const [referenceDate, setReferenceDate] = useState('');
   const [audit, setAudit] = useState(null);
   const [disclosures, setDisclosures] = useState([]);
+  const [downloadingWorkbook, setDownloadingWorkbook] = useState(false);
+  const [workbookError, setWorkbookError] = useState('');
+  const editorRef = useRef(/** @type {{ print: () => void } | null } */ (null));
 
   const update = useCallback((field, value) => {
     setData((prev) => ({ ...prev, [field]: value }));
@@ -79,6 +82,7 @@ export default function KiidWorkflow() {
     setAcknowledged(false);
     setAudit(null);
     setDisclosures([]);
+    setWorkbookError('');
     setData((prev) => ({
       ...prev, srriCategory: '', srriLabel: '', performanceYears: [],
     }));
@@ -138,6 +142,27 @@ export default function KiidWorkflow() {
 
   const reset = () => setData({ ...defaultData, ...sampleData });
 
+  const getWorkbook = async () => {
+    if (!navFile) return;
+    setWorkbookError('');
+    setDownloadingWorkbook(true);
+    try {
+      await downloadWorkbook({
+        file: navFile,
+        frequency,
+        dateFormat,
+        currency: data.shareClassBaseCurrency,
+        referenceDate,
+        hasCharges: Number(data.entryCost) > 0 || Number(data.exitCost) > 0,
+        filename: `${(navFile.name || 'nav').replace(/\.[^.]+$/, '')}-srri-calculation.xlsx`,
+      });
+    } catch (err) {
+      setWorkbookError(err.message);
+    } finally {
+      setDownloadingWorkbook(false);
+    }
+  };
+
   const allFindings = [...(headerFindings || []), ...(navFindings || [])];
   const errors = allFindings.filter((f) => f.severity === 'error');
   const warnings = allFindings.filter((f) => f.severity === 'warning');
@@ -149,36 +174,79 @@ export default function KiidWorkflow() {
     errors.length === 0 &&
     (warnings.length === 0 || acknowledged);
 
-  // The editor step takes over the full screen with its own header (preview +
-  // download), so it is rendered outside the stepper shell.
-  if (step === 3) {
-    return <KiidEditor data={data} update={update} onBack={() => setStep(2)} onReset={reset} />;
-  }
-
   return (
     <div className="h-full flex flex-col bg-background">
-      <header className="flex items-center justify-between gap-4 px-5 h-14 border-b bg-card shrink-0">
-        <div className="flex items-center gap-3">
+      <header className="grid grid-cols-3 items-center gap-4 px-5 h-14 border-b bg-card shrink-0">
+        <div className="flex items-center justify-start">
+          {step > 0 && (
+            <Button variant="ghost" size="sm" onClick={() => setStep((s) => Math.max(0, s - 1))}>
+              <ArrowLeft className="h-4 w-4 mr-1" /> Back
+            </Button>
+          )}
+        </div>
+
+        <div className="flex items-center justify-center gap-3">
           <div className="h-7 w-7 rounded-md bg-primary flex items-center justify-center text-primary-foreground font-bold text-sm">
             K
           </div>
-          <h1 className="text-sm font-semibold">UCITS KIID Generator</h1>
+          <h1 className="text-sm font-semibold">KIID Generator</h1>
         </div>
-        {step > 0 && (
-          <Button variant="ghost" size="sm" onClick={() => setStep((s) => Math.max(0, s - 1))}>
-            <ArrowLeft className="h-4 w-4 mr-1" /> Back
-          </Button>
-        )}
+
+        <div className="flex items-center justify-end gap-2">
+          {step === 3 && (
+            <>
+              <Button variant="ghost" size="sm" onClick={reset} title="Reset to sample data">
+                <RotateCcw className="h-4 w-4 mr-1" /> Reset
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={getWorkbook}
+                disabled={downloadingWorkbook || !navFile}
+                title={
+                  workbookError ||
+                  (!navFile
+                    ? 'Upload a NAV file in Validation to download the workbook'
+                    : 'Download the SRRI calculation workbook')
+                }
+              >
+                {downloadingWorkbook ? (
+                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                ) : (
+                  <Download className="h-4 w-4 mr-1" />
+                )}
+                Calculation workbook
+              </Button>
+              <Button size="sm" onClick={() => editorRef.current?.print()}>
+                <Printer className="h-4 w-4 mr-1" /> Print / Save as PDF
+              </Button>
+            </>
+          )}
+        </div>
       </header>
 
-      <div className="px-5 pt-4 shrink-0">
+      <div className="px-5 py-4 shrink-0">
         <WorkflowStepper steps={STEPS} current={step} onStepClick={(i) => setStep(i)} />
       </div>
 
-      <div className="flex-1 overflow-y-auto">
-        {/* The validation step runs a two-column layout, so it needs the full
-            width; the picker steps stay narrow and centred. */}
-        <div className={cn('mx-auto p-6', step === 2 ? 'max-w-[1500px]' : 'max-w-3xl')}>
+      <div
+        className={cn(
+          'flex-1 px-5 min-h-0',
+          // Split steps fill height so columns scroll independently; otherwise page scrolls.
+          step === 2 || step === 3
+            ? 'overflow-hidden max-xl:overflow-y-auto'
+            : 'overflow-y-auto'
+        )}
+      >
+        {/* Validation and Editor share the wide two-column shell; picker steps stay narrow. */}
+        <div
+          className={cn(
+            'mx-auto p-6',
+            step === 2 || step === 3
+              ? 'max-w-[1500px] xl:h-full xl:min-h-0 xl:flex xl:flex-col'
+              : 'max-w-3xl'
+          )}
+        >
           {step === 0 && <ProductPicker value={product} onChange={setProduct} />}
           {step === 1 && <ProductionMode value={mode} onChange={setMode} />}
           {step === 2 && (
@@ -203,17 +271,20 @@ export default function KiidWorkflow() {
               audit={audit}
             />
           )}
+          {step === 3 && <KiidEditor printRef={editorRef} data={data} update={update} />}
         </div>
       </div>
 
       <footer className="flex items-center justify-between gap-4 px-5 h-16 border-t bg-card shrink-0">
-        <div className="text-xs text-muted-foreground">
+        <div className={cn('text-xs', workbookError && step === 3 ? 'text-red-600' : 'text-muted-foreground')}>
           {step === 0 && 'Select a document type to begin.'}
           {step === 1 && 'Choose how you want to produce documents.'}
           {step === 2 && headerFindings === null && 'Upload a NAV file and run validation.'}
           {step === 2 &&
             headerFindings !== null &&
             `${errors.length} error(s), ${warnings.length} warning(s).`}
+          {step === 3 &&
+            (workbookError || 'Edit narrative sections and check the live 2-page preview.')}
         </div>
         <div className="flex items-center gap-2">
           {step < 2 && (

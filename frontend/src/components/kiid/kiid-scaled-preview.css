@@ -1,0 +1,53 @@
+/* Fit-to-width A4 shell shared by Validation and Editor previews.
+   Transform lives outside `.kiid-print-root` so printKiid clones unscaled markup. */
+
+.kiid-scaled-preview {
+  min-width: 0;
+}
+
+.kiid-scaled-preview__inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 0;
+}
+
+/* Shell height is set in JS to unscaledHeight * scale so scroll tracks visuals.
+   Transform on the child does not affect layout size. */
+.kiid-scaled-preview__scale-shell {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.kiid-scaled-preview__scale {
+  transform-origin: top center;
+  flex-shrink: 0;
+}
+
+.kiid-scaled-preview__print-root {
+  display: inline-block;
+}
+
+@media print {
+  .kiid-scaled-preview__inner {
+    padding: 0;
+    display: block;
+  }
+
+  .kiid-scaled-preview__scale-shell {
+    height: auto !important;
+    overflow: visible;
+    display: block;
+  }
+
+  .kiid-scaled-preview__scale {
+    transform: none !important;
+    width: auto !important;
+  }
+
+  .kiid-scaled-preview__print-root {
+    display: block;
+  }
+}
